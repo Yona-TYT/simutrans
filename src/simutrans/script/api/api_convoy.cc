@@ -15,6 +15,7 @@
 #include "../../simhalt.h"
 #include "../../simline.h"
 #include "../../world/simworld.h"
+#include "../../display/viewport.h"
 #include "../../vehicle/vehicle.h"
 #include "../../display/viewport.h"
 
@@ -25,7 +26,7 @@
 using namespace script_api;
 
 
-waytype_t get_convoy_wt(convoi_t* cnv)
+waytype_t get_convoy_wt(convoi_t const *cnv)
 {
 	if (cnv  &&  cnv->get_vehicle_count() > 0) {
 		return cnv->front()->get_waytype();
@@ -160,7 +161,12 @@ bool convoy_is_schedule_editor_open(convoi_t *cnv)
 	return cnv->get_state() == convoi_t::EDIT_SCHEDULE;
 }
 
-bool convoy_is_loading(convoi_t *cnv)
+sint32 convoy_is_followed(convoi_t const *cnv)
+{
+	return cnv ? world()->get_viewport()->get_follow_convoi().get_id() == cnv->self.get_id() : false;
+}
+
+bool convoy_is_loading(convoi_t const *cnv)
 {
 	return cnv->get_state() == convoi_t::LOADING;
 }
@@ -372,7 +378,11 @@ void export_convoy(HSQUIRRELVM vm)
 	 */
 	register_method(vm, &convoi_t::is_waiting, "is_waiting");
 	/**
-	 * @returns true if convoy is currently waiting (for way clearance)
+	 * @returns true if convoy is currently being followed
+	 */
+	register_method(vm, convoy_is_followed, "is_followed", true);
+	/**
+	 * @returns true if convoy is currently loading or unloading at a stop
 	 */
 	register_method(vm, convoy_is_loading, "is_loading", true);
 	/**

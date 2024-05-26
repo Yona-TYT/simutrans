@@ -460,13 +460,13 @@ void convoi_info_t::draw(scr_coord pos, scr_size size)
 		// entry added or removed
 		init_line_selector();
 		reset_min_windowsize();
+		old_schedule_count = scd.get_schedule()->get_count();
 	}
 	else if(  old_line_count != cnv->get_owner()->simlinemgmt.get_line_count()  ) {
 		// line added or removed
 		init_line_selector();
 		reset_min_windowsize();
 	}
-	old_schedule_count = scd.get_schedule()->get_count();
 
 	line_button.enable( dynamic_cast<line_scrollitem_t*>(line_selector.get_selected_item()) );
 	line_button2.enable( line.is_bound() );
@@ -662,6 +662,19 @@ void convoi_info_t::change_schedule()
 		action_triggered( &switch_mode, 1 );
 	}
 }
+
+
+void convoi_info_t::update_schedule()
+{
+	cnv->check_pending_updates();
+	scd.init(cnv->get_schedule(), cnv->get_owner(), cnv, cnv->get_line(),true);
+	change_schedule();
+	if (switch_mode.get_aktives_tab() == &container_schedule) {
+		cnv->set_state(convoi_t::EDIT_SCHEDULE);
+		scd.highlight_schedule(true);
+	}
+}
+
 
 
 bool convoi_info_t::infowin_event(const event_t *ev)

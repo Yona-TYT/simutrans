@@ -44,6 +44,9 @@
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <EnableASAN>true</EnableASAN>
   </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <EnableASAN>true</EnableASAN>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="Shared">
     <Import Project="Simutrans-Main.vcxitems" Label="Shared" />
@@ -92,18 +95,15 @@
     </VcpkgHostTriplet>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <VcpkgHostTriplet>
-    </VcpkgHostTriplet>
+    <VcpkgHostTriplet>x64-windows-static</VcpkgHostTriplet>
     <VcpkgUseStatic>true</VcpkgUseStatic>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <VcpkgHostTriplet>
-    </VcpkgHostTriplet>
+    <VcpkgHostTriplet>x64-windows-static</VcpkgHostTriplet>
     <VcpkgUseStatic>true</VcpkgUseStatic>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Stable|x64'">
-    <VcpkgHostTriplet>
-    </VcpkgHostTriplet>
+    <VcpkgHostTriplet>x64-windows-static</VcpkgHostTriplet>
     <VcpkgUseStatic>true</VcpkgUseStatic>
   </PropertyGroup>
   <ItemDefinitionGroup>

@@ -102,6 +102,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\citylist_frame.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\citylist_stats.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\climates.cc" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\chat_frame.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\components\gui_aligned_container.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\components\gui_building.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\components\gui_button.cc" />
@@ -185,6 +186,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\pakselector.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\password_frame.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\player_frame.cc" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\player_ranking_frame.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\privatesign_info.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\savegame_frame.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\gui\scenario_frame.cc" />
@@ -292,6 +294,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\script\script.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\script\script_loader.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\script\script_tool_manager.cc" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\simachievements.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\simconvoi.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\simdebug.cc" />
     <ClCompile Include="$(MSBuildThisFileDirectory)src\simutrans\simevent.cc" />
@@ -472,6 +475,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\citylist_frame.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\citylist_stats.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\climates.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\chat_frame.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\components\action_listener.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\components\gui_action_creator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\components\gui_aligned_container.h" />
@@ -558,6 +562,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\pakselector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\password_frame.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\player_frame.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\player_ranking_frame.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\privatesign_info.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\savegame_frame.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\simutrans\gui\scenario_frame.h" />

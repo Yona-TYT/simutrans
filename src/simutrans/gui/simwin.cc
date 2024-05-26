@@ -55,6 +55,7 @@
 #include "city_info.h"
 #include "citylist_frame.h"
 #include "message_frame.h"
+#include "chat_frame.h"
 #include "message_option.h"
 #include "fabrik_info.h"
 #include "themeselector.h"
@@ -73,6 +74,7 @@
 #include "labellist_frame.h"
 #include "display_settings.h"
 #include "optionen.h"
+#include "player_ranking_frame.h"
 
 #include "../simversion.h"
 
@@ -603,6 +605,7 @@ void rdwr_all_win(loadsave_t *file)
 					case magic_city_info_t:    w = new city_info_t(); break;
 					case magic_messageframe:   w = new message_frame_t(); break;
 					case magic_message_options: w = new message_option_t(); break;
+					case magic_chatframe:      w = new chat_frame_t(); break;
 					case magic_factory_info:   w = new fabrik_info_t(); break;
 					case magic_goodslist:      w = new goods_frame_t(); break;
 					case magic_font:           w = new loadfont_frame_t(); break;
@@ -621,6 +624,7 @@ void rdwr_all_win(loadsave_t *file)
 					case magic_labellist:      w = new labellist_frame_t(); break;
 					case magic_color_gui_t:    w = new color_gui_t(); break;
 					case magic_optionen_gui_t: w = new optionen_gui_t(); break;
+					case magic_player_ranking: w = new player_ranking_frame_t(); break;
 
 					default:
 						if(  id>=magic_finances_t  &&  id<magic_finances_t+MAX_PLAYER_COUNT  ) {
