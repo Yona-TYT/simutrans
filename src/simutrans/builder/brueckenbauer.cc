@@ -15,6 +15,7 @@
 #include "../obj/depot.h"
 #include "../player/simplay.h"
 #include "../simtypes.h"
+#include "../simachievements.h"
 
 #include "../ground/boden.h"
 #include "../ground/brueckenboden.h"
@@ -106,6 +107,7 @@ void bridge_builder_t::fill_menu(tool_selector_t *tool_selector, const waytype_t
 	if (!welt->get_scenario()->is_tool_allowed(welt->get_active_player(), TOOL_BUILD_BRIDGE | GENERAL_TOOL, wtyp)) {
 		return;
 	}
+	bool enable = welt->get_scenario()->is_tool_enabled(welt->get_active_player(), TOOL_BUILD_BRIDGE | GENERAL_TOOL, wtyp);
 
 	const uint16 time = welt->get_timeline_year_month();
 	vector_tpl<const bridge_desc_t*> matching(desc_table.get_count());
@@ -119,7 +121,8 @@ void bridge_builder_t::fill_menu(tool_selector_t *tool_selector, const waytype_t
 	}
 
 	// now sorted ...
-	for(bridge_desc_t const* const i : matching) {
+	for(bridge_desc_t const *i : matching) {
+		i->get_builder()->enabled = enable;
 		tool_selector->add_tool_selector(i->get_builder());
 	}
 }
@@ -1053,6 +1056,7 @@ const char *bridge_builder_t::remove(player_t *player, koord3d pos_start, waytyp
 		msg = from->kann_alle_obj_entfernen(player);
 
 		if(msg != NULL  ||  (from->get_halt().is_bound()  &&  from->get_halt()->get_owner()!=player)) {
+			simachievements_t::set_achievement(ACH_TOOL_REMOVE_BUSY_BRIDGE);
 			return "Die Bruecke ist nicht frei!\n";
 		}
 

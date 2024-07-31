@@ -12,7 +12,7 @@ m+10r.bdf
 #                             Language: ja Japanese                            #
 #                                Encoding: UTF-8                               #
 #                                Font: m+10r.bdf                               #
-#                            Date Created: 5.05 2024                           #
+#                           Date Created: 20.07 2024                           #
 #                                                                              #
 ################################################################################
 #__________________________________button_text__________________________________
@@ -173,6 +173,8 @@ Cannot built depot here!
 ここに車庫を\n建てることはできません。
 Cannot built this station/building\nin underground mode here.
 駅ビル/駅舎は、\n地下には建設できません。
+Cannot connect to the\ncenter of a double slope!
+ダブルスロープの中間の高さには橋を建設できません。
 Cannot create generic line!\nSelect line type by\nusing filter tabs.
 汎用の路線を作成することはできません。\nタブで路線のタイプを選んでください。
 Cannot create socket
@@ -255,6 +257,8 @@ Server busy
 サーバー使用中\nServer busy
 Server version too new
 サーバーで使用されているものより古いバージョンのプログラムです
+Ship depots must be built on water!
+造船所は水上に建設する必要があります！
 Show all revenue messages
 全てのプレイヤーの収益を表示
 Show no revenue messages
@@ -965,8 +969,6 @@ December
 12月
 decrease underground view level
 ハイトカットレベルを下げる
-Default.sve
-デフォルト
 Del Stop
  削除
 Delete Line

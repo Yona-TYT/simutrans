@@ -33,7 +33,7 @@ bool vehiclelist_stats_t::reverse = false;
 int vehiclelist_stats_t::img_width = 100;
 
 
-vehiclelist_stats_t::vehiclelist_stats_t(const vehicle_desc_t *v) : 
+vehiclelist_stats_t::vehiclelist_stats_t(const vehicle_desc_t *v) :
 	details(&details_buf,0)
 {
 	veh = v;
@@ -104,10 +104,16 @@ vehiclelist_stats_t::vehiclelist_stats_t(const vehicle_desc_t *v) :
 	display_calc_proportional_multiline_string_len_width( text2w, text2h, part2);
 	col2_width = text2w;
 
-	if (const char* detail_str = translator::translate_obj_details(veh->get_name())) {
-		details_buf.append(detail_str);
-		details.set_width(col1_width + col2_width);
-		name_h += details.get_size().h;
+	// we need to find out manually, if we have extra text to show
+	if (strlen(veh->get_name()) < 238) {
+		char ei[256];
+		sprintf(ei, "obj_%s_details", veh->get_name());
+		const char* translated_ei = translator::translate(ei);
+		if (ei != translated_ei) {
+			details_buf.append(translated_ei);
+			details.set_width(col1_width + col2_width);
+			name_h += details.get_size().h;
+		}
 	}
 
 	height = max( height, max( text1h, text2h ) + name_h )+D_V_SPACE;
@@ -291,7 +297,7 @@ void vehiclelist_frame_t::fill_list()
 	const goods_desc_t *ware = idx_to_ware[ max( 0, ware_filter.get_selection() ) ];
 	// adding all vehiles, i.e. iterate over all available waytypes
 	for (uint32 i = 1; i < tabs.get_count(); i++) {
-		if(  tabs.get_active_tab_index()>0  &&  i!=tabs.get_active_tab_index()  ) {
+		if(  tabs.get_active_tab_index()>0  &&  (sint32)i!=tabs.get_active_tab_index()  ) {
 			// wrong waytype
 			continue;
 		}

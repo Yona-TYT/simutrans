@@ -118,6 +118,8 @@ protected:
 	void cleanup_elements(bool resize=true);
 
 public:
+	scr_size get_container_min_size() const { return container.get_min_size(); }
+
 	virtual void set_skin_type(enum type t) { this->type = t; }
 
 	void set_cmp(item_compare_func cmp) { compare = cmp; }
@@ -135,7 +137,7 @@ public:
 	vector_tpl<sint32> get_selections() const;
 
 	scrollitem_t* get_selected_item() const;
-	sint32 get_count() const { return item_list.get_count(); }
+	uint32 get_count() const { return item_list.get_count(); }
 
 	void enable_multiple_selection() { multiple_selection = true; }
 

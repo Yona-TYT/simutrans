@@ -77,20 +77,20 @@ void gui_scrollpane_t::recalc_sliders(scr_size size)
 		scroll_x.set_knob( size.w, comp->get_size().w + comp->get_pos().x );
 	}
 	else {
-		scroll_x.set_size( size-D_SCROLLBAR_SIZE );
+		scroll_x.set_size( size );
 		scroll_x.set_knob( size.w, comp->get_size().w + comp->get_pos().x );
 	}
 
 	if(  b_show_scroll_x  &&  scroll_x.is_visible()  ) {
 		scroll_y.set_size( size-D_SCROLLBAR_SIZE );
-		scroll_y.set_knob( size.h-D_SCROLLBAR_HEIGHT, comp->get_size().h + comp->get_pos().y );
+		scroll_y.set_knob( size.h, comp->get_size().h + comp->get_pos().y );
 	}
 	else if(  b_has_size_corner  ) {
 		scroll_y.set_size( size-D_SCROLLBAR_SIZE );
 		scroll_y.set_knob( size.h, comp->get_size().h + comp->get_pos().y );
 	}
 	else {
-		scroll_y.set_size( size-scr_coord(D_SCROLLBAR_WIDTH,0) );
+		scroll_y.set_size( size );
 		scroll_y.set_knob( size.h, comp->get_size().h + comp->get_pos().y );
 	}
 
@@ -175,6 +175,8 @@ bool gui_scrollpane_t::infowin_event(const event_t *ev)
 		// we will handle dragging ourselves inf not prevented
 		if(  b_is_dragging  &&  ev->ev_class < INFOWIN  ) {
 			// now drag: scrollbars are not in pixel, but we will scroll one unit per pixels ...
+			scroll_x.set_sticky_bottom(false);
+			scroll_y.set_sticky_bottom(false);
 			scroll_x.set_knob_offset(scroll_x.get_knob_offset() - (ev->mouse_pos.x - origin.x));
 			scroll_y.set_knob_offset(scroll_y.get_knob_offset() - (ev->mouse_pos.y - origin.y));
 			origin = ev->mouse_pos;
@@ -277,13 +279,13 @@ void gui_scrollpane_t::set_scroll_position(int x, int y)
 }
 
 
-int gui_scrollpane_t::get_scroll_x() const
+sint32 gui_scrollpane_t::get_scroll_x() const
 {
 	return scroll_x.get_knob_offset();
 }
 
 
-int gui_scrollpane_t::get_scroll_y() const
+sint32 gui_scrollpane_t::get_scroll_y() const
 {
 	return scroll_y.get_knob_offset();
 }

@@ -33,31 +33,28 @@ class chat_frame_t : public gui_frame_t, private action_listener_t
 {
 private:
 	char ibuf[256];
-	char ibuf_name[256];
-	gui_aligned_container_t cont_tab_whisper;
+
+	gui_aligned_container_t* inputtable;
 
 	gui_scrolled_list_t	cont_chat_log[3];
 	gui_tab_panel_t tabs;
-	gui_textinput_t
-		input,
-		inp_destination;
-	gui_label_buf_t
-		lb_now_online,
-		lb_whisper_target,
-		lb_channel;
-	button_t opaque_bt,
-		bt_send_pos;
+	gui_textinput_t input;
+	gui_label_buf_t lb_now_online, lb_whisper_target;
+	gui_label_t lb_channel;
+	button_t opaque_bt, bt_send_pos;
+	gui_combobox_t cb_direct_chat_targets;
 
 	uint32 last_count = 0; // of messages in list
 	sint8 old_player_nr = 0;
+	plainstring selected_destination;
 
-	vector_tpl<plainstring> chat_history;
-	gui_combobox_t cb_direct_chat_targets;
-
-	void fill_list();
+	bool reactivate_input;
 
 public:
 	chat_frame_t();
+
+	// update the content
+	void fill_list();
 
 	/**
 	 * Set the window associated helptext
@@ -76,6 +73,9 @@ public:
 	uint32 get_rdwr_id() OVERRIDE { return magic_chatframe; }
 
 	void draw(scr_coord pos, scr_size size) OVERRIDE;
+
+	// theoretically, map roatation should not happen with netwrok games ...
+	void map_rotate90(sint16 /*new_ysize*/) OVERRIDE { fill_list(); }
 };
 
 #endif

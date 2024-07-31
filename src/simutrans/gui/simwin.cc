@@ -83,6 +83,9 @@ class inthashtable_tpl<ptrdiff_t,scr_coord> old_win_pos;
 // hash-table: magic number to windowsize
 class inthashtable_tpl<ptrdiff_t, scr_size> saved_windowsizes;
 
+// true if there is little space for the status messages
+static bool status_show_compact = false;
+
 
 // I added a button to the map window to fix it's size to the best one.
 // This struct is the flow back to the object of the refactoring.
@@ -659,7 +662,7 @@ void rdwr_all_win(loadsave_t *file)
 				p.rdwr(file);
 				uint8 win_type;
 				file->rdwr_byte( win_type );
-				create_win( p, w, (wintype)win_type, id, true );
+				create_win( p, w, (wintype)win_type, id );
 				bool sticky, rollup;
 				file->rdwr_bool( sticky );
 				file->rdwr_bool( rollup );
@@ -682,41 +685,83 @@ void rdwr_all_win(loadsave_t *file)
 /* tries to get a window on the screen
  * without titlebar hidden by any menubar/satus bar elements
  */
-void win_clamp_xywh_position( scr_coord &pos, scr_size wh, bool move_topleft )
+void win_clamp_xywh_position( gui_frame_t* gui, scr_coord &pos, scr_size wh, bool move_topleft )
 {
-	scr_coord_val add_menuwidth = env_t::iconsize.w;
-	scr_coord_val add_menuheight = env_t::iconsize.h;
-
-	scr_rect clip_rr(0, add_menuheight, display_get_width(), display_get_height() - add_menuwidth - win_get_statusbar_height());
-	switch (env_t::menupos) {
-	case MENU_TOP:
-		// rect default
-		break;
-	case MENU_BOTTOM:
-		clip_rr = scr_rect(0, win_get_statusbar_height(), display_get_width(), clip_rr.h );
-		break;
-	case MENU_LEFT:
-		clip_rr = scr_rect(add_menuwidth, 0, display_get_width() - add_menuwidth, display_get_height() - win_get_statusbar_height());
-		break;
-	case MENU_RIGHT:
-		clip_rr = scr_rect(0, 0, display_get_width() - add_menuwidth, display_get_height() - win_get_statusbar_height());
-		break;
+	// reposition to keep on screen
+	scr_coord other_pos((env_t::menupos == MENU_LEFT) * env_t::iconsize.w, (env_t::menupos == MENU_TOP) * env_t::iconsize.h + (env_t::menupos == MENU_BOTTOM) * win_get_statusbar_height());
+	scr_size other_size(display_get_width() - other_pos.x - (env_t::menupos == MENU_RIGHT) * env_t::iconsize.w,
+		display_get_height() - win_get_statusbar_height() - env_t::iconsize.h);
+	if (show_ticker) {
+		other_size.h -= TICKER_HEIGHT;
+		if (env_t::menupos == MENU_BOTTOM) {
+			other_pos.y += TICKER_HEIGHT;
+		}
 	}
+	scr_rect screen(other_pos, other_size);
 
+	if (pos.y < other_pos.y) {
+		// y alsways visible
+		pos.y = other_pos.y;
+	}
+	if (move_topleft) {
+		if (pos.x < other_pos.x) {
+			pos.x = other_pos.x;
+		}
+	}
 
 	// should we move to be fully on screen?
 	if (move_topleft) {
-		if (pos.x + wh.w > clip_rr.x + clip_rr.w) {
-			pos.x = clip_rr.x + clip_rr.w - wh.w;
+		if (pos.x + wh.w > screen.x + screen.w) {
+			pos.x = screen.x + screen.w - wh.w;
 		}
-		if (pos.y + wh.h > clip_rr.y + clip_rr.h) {
-			pos.y = clip_rr.y + clip_rr.h - wh.h;
+		if (pos.y + wh.h > screen.y + screen.h) {
+			pos.y = screen.y + screen.h - wh.h;
 		}
 	}
 
-	// now do not hide titlebar by menubar
-	pos.x = max(pos.x, clip_rr.x);
-	pos.y = max(pos.y, clip_rr.y);
+	if (gui) {
+		if (wh.w > other_size.w || wh.h > other_size.h) {
+			// window still to big => maybe we can resize it to fit the screen
+			scr_size minsize = gui->get_min_windowsize();
+			if (minsize != wh) {
+				bool resize = false;
+				if (pos.x < other_pos.x  &&  minsize.w < other_size.w) {
+					// too wide
+					pos.x = other_pos.x;
+					minsize.w = other_size.w;
+					resize = true;
+				}
+				if (pos.y < other_pos.y  &&  minsize.h < other_size.h) {
+					//too high
+					pos.y = other_pos.y;
+					minsize.h = other_size.h;
+					resize = true;
+				}
+				if (resize) {
+					gui->set_windowsize(minsize);
+				}
+			}
+			else if (move_topleft) {
+				// center on screen
+				if (pos.x < other_pos.x) {
+					pos.x = other_pos.x - (wh.w - other_size.w) / 2;
+				}
+				if (pos.y < other_pos.y) {
+					pos.y = other_pos.y - (wh.h - other_size.h) / 2;
+				}
+			}
+			// make sure some corner remains visible
+			if (pos.x + wh.w < other_pos.x + D_MARGIN_LEFT) {
+				pos.x = other_pos.x + D_MARGIN_LEFT - wh.w;
+			}
+			if (pos.x > other_pos.x + other_size.w - D_MARGIN_LEFT) {
+				pos.x = other_pos.x + other_size.w - D_MARGIN_LEFT;
+			}
+			if (pos.y + D_TITLEBAR_HEIGHT > other_pos.y + other_size.h) {
+				pos.y = other_pos.y + other_size.h - D_TITLEBAR_HEIGHT;
+			}
+		}
+	}
 }
 
 int create_win(gui_frame_t* const gui, wintype const wt, ptrdiff_t const magic)
@@ -724,7 +769,7 @@ int create_win(gui_frame_t* const gui, wintype const wt, ptrdiff_t const magic)
 	return create_win({ -1, -1 }, gui, wt, magic);
 }
 
-int create_win(scr_coord pos, gui_frame_t *const gui, wintype const wt, ptrdiff_t const magic, bool move_to_full_view)
+int create_win(scr_coord pos, gui_frame_t *const gui, wintype const wt, ptrdiff_t const magic)
 {
 	assert(gui!=NULL  &&  magic!=0);
 
@@ -839,14 +884,12 @@ int create_win(scr_coord pos, gui_frame_t *const gui, wintype const wt, ptrdiff_
 
 		// try to go next to mouse bar
 		if (pos.x == -1) {
-			move_to_full_view = true;
 			pos.x = get_mouse_pos().x - gui->get_windowsize().w / 2;
 			pos.y = get_mouse_pos().y - gui->get_windowsize().h - get_tile_raster_width()/4;
 		}
 
 		// make sure window is on screen
-		win_clamp_xywh_position(pos, gui->get_windowsize(), move_to_full_view);
-
+		win_clamp_xywh_position(gui, pos, gui->get_windowsize(), true);
 
 		win.pos = pos;
 		win.dirty = true;
@@ -892,7 +935,8 @@ int top_win(int win, bool keep_state )
 		return win;
 	} // already topped
 
-	  // mark old dirty
+
+	// mark old dirty
 	scr_size size = wins.back().gui->get_windowsize();
 	mark_rect_dirty_wc( wins.back().pos.x - 1, wins.back().pos.y - 1, wins.back().pos.x + size.w + 2, wins.back().pos.y + size.h + 2 ); // -1, +2 for env_t::window_frame_active
 	wins.back().dirty = true;
@@ -1338,7 +1382,7 @@ static void move_win(int win, event_t *ev)
 	}
 
 	// CLIP(wert,min,max)
-	win_clamp_xywh_position(to_pos, wins[win].gui->get_windowsize(), false);
+	win_clamp_xywh_position(wins[win].gui, to_pos, wins[win].gui->get_windowsize(), false);
 
 	// delta is actual window movement.
 	const scr_coord delta = to_pos - from_pos;
@@ -1423,6 +1467,7 @@ void win_set_pos(gui_frame_t *gui, scr_coord new_pos)
 {
 	for(  uint32 i = wins.get_count(); i-- != 0;  ) {
 		if(  wins[i].gui == gui  ) {
+			win_clamp_xywh_position(gui, new_pos, gui->get_windowsize(), true);
 			wins[i].pos   = new_pos;
 			wins[i].dirty = true;
 			return;
@@ -1738,14 +1783,29 @@ void win_poll_event(event_t* const ev)
 	if(  ev->ev_class==EVENT_SYSTEM  &&  ev->ev_code==SYSTEM_RESIZE  ) {
 		// main window resized
 		simgraph_resize( ev->new_window_size );
+		gui_theme_t::gui_buttons_per_row = max(2, min(4, display_get_width() / (D_BUTTON_WIDTH + D_H_SPACE + D_MARGIN_LEFT)));
 		ticker::redraw();
 		tool_t::update_toolbars();
 		for( uint i = 0; i<wins.get_count(); i++ ) {
-			win_clamp_xywh_position( wins[i].pos, wins[i].gui->get_min_windowsize(), true );
+			win_clamp_xywh_position(wins[i].gui, wins[i].pos, wins[i].gui->get_min_windowsize(), true );
 		}
 		wl->set_dirty();
 		wl->get_viewport()->metrics_updated();
 		ev->ev_class = IGNORE_EVENT;
+		// now see how much of the status text fits the display
+		scr_coord_val time_width = proportional_string_width(tick_to_string(wl->get_ticks()));
+		scr_coord_val player_width = proportional_string_width(wl->get_active_player()->get_name());
+		char buffer[128];
+		if (env_t::player_finance_display_account) {
+			money_to_string(buffer, (double)world()->get_active_player()->get_finance()->get_account_balance() / 100.0);
+		}
+		else {
+			money_to_string(buffer, (double)world()->get_active_player()->get_finance()->get_netwealth() / 100.0);
+		}
+		scr_coord_val money_width = proportional_string_width(buffer);
+		scr_coord_val position_width = proportional_string_width(wl->get_zeiger()->get_pos().get_str());
+		// if too long shorten radically
+		status_show_compact = (time_width + player_width + money_width + position_width) * 1.2 > ev->new_window_size.w;
 	}
 	// save and reload all windows (currently only used when a new theme is applied)
 	else if(  ev->ev_class==EVENT_SYSTEM  &&  ev->ev_code==SYSTEM_RELOAD_WINDOWS  ) {
@@ -1870,7 +1930,7 @@ void win_display_flush(double konto)
 				if(  !tooltip_owner  ||  ((elapsed_time=dr_time()-tooltip_register_time)>env_t::tooltip_delay  &&  elapsed_time<=env_t::tooltip_delay+env_t::tooltip_duration)  ) {
 					const sint16 width = proportional_string_width(tooltip_text)+(LINESPACE/2);
 					scr_coord pos{ tooltip_xpos, tooltip_ypos };
-					win_clamp_xywh_position( pos, scr_size( width, (LINESPACE*9)/7 ), true );
+					win_clamp_xywh_position( NULL, pos, scr_size( width, (LINESPACE*9)/7 ), true );
 					display_ddd_proportional_clip( pos.x, pos.y, env_t::tooltip_color, env_t::tooltip_textcolor, tooltip_text, true);
 					if(wl) {
 						wl->set_background_dirty();
@@ -1880,7 +1940,7 @@ void win_display_flush(double konto)
 			else if(!static_tooltip_text.empty()) {
 				const sint16 width = proportional_string_width(static_tooltip_text.c_str())+ (LINESPACE/2);
 				scr_coord pos = get_mouse_pos();
-				win_clamp_xywh_position(pos, scr_size(width, (LINESPACE*9)/7), true);
+				win_clamp_xywh_position( NULL, pos, scr_size(width, (LINESPACE*9)/7), true);
 				display_ddd_proportional_clip(pos.x, pos.y, env_t::tooltip_color, env_t::tooltip_textcolor, static_tooltip_text.c_str(), true);
 				if(wl) {
 					wl->set_background_dirty();
@@ -1903,7 +1963,16 @@ void win_display_flush(double konto)
 		}
 	}
 
-	char const *time = tick_to_string( wl->get_ticks() );
+	char const* time;
+	if (status_show_compact  &&  env_t::show_month >= env_t::DATE_FMT_JAPANESE  &&  env_t::show_month <= env_t::DATE_FMT_GERMAN) {
+		// omit season from the date string
+		env_t::show_month += 3;
+		time = tick_to_string(wl->get_ticks());
+		env_t::show_month -= 3;
+	}
+	else {
+		time = tick_to_string(wl->get_ticks());
+	}
 
 	// statusbar background
 	scr_coord_val const status_bar_height = win_get_statusbar_height();
@@ -1921,13 +1990,16 @@ void win_display_flush(double konto)
 		tooltip_ypos = env_t::menupos == MENU_BOTTOM ? status_bar_height + 10 + TICKER_HEIGHT * show_ticker : status_bar_y - 10 - TICKER_HEIGHT * show_ticker;
 	}
 
-	// season color
-	display_color_img( skinverwaltung_t::seasons_icons->get_image_id(wl->get_season()), 2, status_bar_icon_y, 0, false, true );
+	scr_coord_val left_border = 2;
+
+	// season icon
+	display_color_img( skinverwaltung_t::seasons_icons->get_image_id(wl->get_season()), left_border, status_bar_icon_y, 0, false, true );
 	if(  tooltip_check  &&  tooltip_xpos<14  ) {
 		static char const* const seasons[] = { "q2", "q3", "q4", "q1" };
 		tooltip_text = translator::translate(seasons[wl->get_season()]);
 		tooltip_check = false;
 	}
+	left_border += 14;
 
 	scr_coord_val right_border = disp_width-4;
 
@@ -1970,6 +2042,7 @@ void win_display_flush(double konto)
 			tooltip_check = false;
 		}
 	}
+	right_border -= 4;
 
 	koord3d pos = wl->get_zeiger()->get_pos();
 
@@ -1990,14 +2063,16 @@ void win_display_flush(double konto)
 			info.printf(" %s(T~%1.2f)", skinverwaltung_t::fastforwardsymbol?"":">> ", wl->get_simloops()/50.0 );
 		}
 		else if(!wl->is_paused()) {
-			info.printf(" (T=%1.2f)", wl->get_time_multiplier()/16.0 );
+			if (wl->get_time_multiplier() != 16) {
+				info.printf(" (T=%1.2f)", wl->get_time_multiplier() / 16.0);
+			}
 		}
 		else if(  skinverwaltung_t::pausesymbol==NULL  ) {
 			info.printf( " %s", translator::translate("GAME PAUSED") );
 		}
 	}
 #ifdef DEBUG
-	if(  env_t::verbose_debug>3  ) {
+	if(  env_t::verbose_debug>1  ) {
 		if(  haltestelle_t::get_rerouting_status()==RECONNECTING  ) {
 			info.append( " +" );
 		}
@@ -2011,18 +2086,56 @@ void win_display_flush(double konto)
 		}
 	}
 #endif
-	display_proportional_rgb(20, status_bar_text_y, time, ALIGN_LEFT, SYSCOL_STATUSBAR_TEXT, true);
-	display_proportional_rgb(right_border-4, status_bar_text_y, info, ALIGN_RIGHT, SYSCOL_STATUSBAR_TEXT, true);
-	/* Since the visual center (disp_width + ((w_left + 8) & 0xFFF0) - ((w_right + 8) & 0xFFF0)) / 2;
-	 * jumps left and right with proportional fonts, we just take the actual center
+	left_border += 4 + display_proportional_rgb(left_border, status_bar_text_y, time, ALIGN_LEFT, SYSCOL_STATUSBAR_TEXT, true);
+	right_border -= 4 + display_proportional_rgb(right_border, status_bar_text_y, info, ALIGN_RIGHT, SYSCOL_STATUSBAR_TEXT, true);
+
+	/* Since the visual center jumps left and right with proportional fonts, we quantisze by 16 pixel
 	 */
-	scr_coord_val middle = disp_width / 2;
+	left_border = (left_border + 15) & 0xFFFFFFF0ul;
+	right_border = (right_border - 15) & 0xFFFFFFF0ul;
 
 	if(wl->get_active_player()) {
 		char buffer[256];
-		display_proportional_rgb( middle-5, status_bar_text_y, wl->get_active_player()->get_name(), ALIGN_RIGHT, PLAYER_FLAG|color_idx_to_rgb(wl->get_active_player()->get_player_color1()+env_t::gui_player_color_dark), true);
-		money_to_string(buffer, konto );
-		display_proportional_rgb( middle+5, status_bar_text_y, buffer, ALIGN_LEFT, konto >= 0.0?MONEY_PLUS:MONEY_MINUS, true);
+		scr_coord_val textwidth_pl = 0;
+		textwidth_pl = D_H_SPACE + proportional_string_width(wl->get_active_player()->get_name());
+		if (status_show_compact) {
+			number_to_string_fit(buffer, konto, 0, 10);
+			strcat(buffer, "$");
+		}
+		else {
+			money_to_string(buffer, konto);
+		}
+		scr_coord_val textwidth_mn = (proportional_string_width(buffer)+15) & 0xFFFFFFF0ul;
+		if (textwidth_mn + textwidth_pl < right_border - left_border) {
+			// everything fits
+			left_border += ( (right_border - left_border) - (textwidth_mn + textwidth_pl)  ) / 2;
+			left_border += D_H_SPACE + display_proportional_rgb(left_border, status_bar_text_y, wl->get_active_player()->get_name(), ALIGN_LEFT, PLAYER_FLAG | color_idx_to_rgb(wl->get_active_player()->get_player_color1() + env_t::gui_player_color_dark), true);
+			display_proportional_rgb(left_border, status_bar_text_y, buffer, ALIGN_LEFT, konto >= 0.0 ? MONEY_PLUS : MONEY_MINUS, true);
+		}
+		else {
+			// no space => only money
+			status_show_compact = true; // make sure the seasons are omitted next time
+			scr_coord_val width_left = (right_border - left_border - textwidth_mn);
+			if (width_left > 50) {
+				scr_rect r(left_border, status_bar_text_y, width_left-D_H_SPACE, LINESPACE);
+				display_proportional_ellipsis_rgb(r, wl->get_active_player()->get_name(), ALIGN_LEFT, PLAYER_FLAG | color_idx_to_rgb(wl->get_active_player()->get_player_color1() + env_t::gui_player_color_dark), true);
+				left_border += width_left;
+				// normal color
+				display_proportional_rgb(left_border, status_bar_text_y, buffer, ALIGN_LEFT, konto >= 0.0 ? MONEY_PLUS : MONEY_MINUS, true);
+			}
+			else {
+				// just money in player color, no player name
+				if (width_left > 0) {
+					left_border += (right_border - left_border - textwidth_mn) / 2;
+				}
+				else {
+					// shortest possible money strong
+					number_to_string_fit(buffer, konto, 0, 5);
+					strcat(buffer, "$");
+				}
+				display_proportional_rgb(left_border, status_bar_text_y, buffer, ALIGN_LEFT, konto >= 0.0 ? color_idx_to_rgb(wl->get_active_player()->get_player_color1() + env_t::gui_player_color_dark) : MONEY_MINUS, true);
+			}
+		}
 	}
 }
 
@@ -2126,7 +2239,7 @@ void win_set_tooltip(scr_coord pos, const char *text, const void *const owner, c
 
 	if (text) {
 		const scr_size tt_size = scr_size(proportional_string_width(text), LINESPACE + 2);
-		win_clamp_xywh_position(pos, tt_size, true);
+		win_clamp_xywh_position(NULL, pos, tt_size, true);
 		pos.y += LINESPACE / 2 + 1;
 	}
 
@@ -2164,7 +2277,7 @@ void modal_dialogue(gui_frame_t* gui, ptrdiff_t magic, karte_t* welt, bool (*qui
 		(display_get_width() - gui->get_windowsize().w) / 2,
 		(display_get_height() - gui->get_windowsize().h) / 2
 	};
-	win_clamp_xywh_position(pos, gui->get_windowsize(), true);
+	win_clamp_xywh_position(gui, pos, gui->get_windowsize(), true);
 	wins[wins[0].gui!=gui].pos = pos;
 
 	if (welt) {
@@ -2178,7 +2291,7 @@ void modal_dialogue(gui_frame_t* gui, ptrdiff_t magic, karte_t* welt, bool (*qui
 		uint32 frame_start_time;
 		uint32 sync_steps_until_step = sync_steps_per_step;
 
-		while (win_is_open(gui) && !env_t::quit_simutrans && !quit()) {
+		while (gui && win_is_open(gui) && !env_t::quit_simutrans && !quit()) {
 			frame_start_time = dr_time();
 
 			do {
@@ -2190,8 +2303,8 @@ void modal_dialogue(gui_frame_t* gui, ptrdiff_t magic, karte_t* welt, bool (*qui
 					break;
 				}
 
-				win_clamp_xywh_position(ev.mouse_pos, scr_size(1, 1), false);
-				win_clamp_xywh_position(ev.mouse_pos, scr_size(1, 1), false);
+				win_clamp_xywh_position(NULL, ev.mouse_pos, scr_size(1, 1), false);
+				win_clamp_xywh_position(NULL, ev.mouse_pos, scr_size(1, 1), false);
 
 				if (ev.ev_class == EVENT_KEYBOARD && ev.ev_code == SIM_KEY_F1) {
 					if (gui_frame_t* win = win_get_top()) {
@@ -2208,6 +2321,7 @@ void modal_dialogue(gui_frame_t* gui, ptrdiff_t magic, karte_t* welt, bool (*qui
 						(ev.ev_class == EVENT_CLICK && !gui->is_hit(ev.click_pos.x - pos.x, ev.click_pos.y - pos.y))
 					) {
 						destroy_win(gui);
+						gui = NULL;
 					}
 				}
 
@@ -2242,7 +2356,7 @@ void modal_dialogue(gui_frame_t* gui, ptrdiff_t magic, karte_t* welt, bool (*qui
 		display_show_pointer(true);
 		display_show_load_pointer(0);
 		display_fillbox_wh_rgb(0, 0, display_get_width(), display_get_height(), color_idx_to_rgb(COL_BLACK), true);
-		while (win_is_open(gui) && !env_t::quit_simutrans && !quit()) {
+		while (gui && win_is_open(gui) && !env_t::quit_simutrans && !quit()) {
 			// do not move, do not close it!
 
 			// check for events again after waiting

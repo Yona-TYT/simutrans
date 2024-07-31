@@ -129,7 +129,11 @@ schedule_list_gui_t::schedule_list_gui_t(player_t *player_) :
 		add_component(&sorteddir);
 
 		new_component<gui_fill_t>();
+	}
+	end_table();
 
+	add_table(3, 1);
+	{
 		// line control buttons
 		bt_new_line.init(button_t::roundbox, "New Line");
 		bt_new_line.add_listener(this);
@@ -140,14 +144,13 @@ schedule_list_gui_t::schedule_list_gui_t(player_t *player_) :
 		bt_delete_line.add_listener(this);
 		add_component( &bt_delete_line );
 
-		bt_single_line.init( button_t::square_automatic, "Single GUI" );
+		bt_single_line.init( button_t::square_automatic | button_t::flexible, "Single GUI" );
 		bt_single_line.set_tooltip( "Closes topmost line window when new line selected." );
 		bt_single_line.add_listener( this );
 		bt_single_line.pressed = env_t::single_line_gui;
 		add_component( &bt_single_line );
 
 		new_component<gui_fill_t>();
-
 	}
 	end_table();
 
@@ -251,7 +254,7 @@ bool schedule_list_gui_t::action_triggered( gui_action_creator_t *comp, value_t 
 						}
 					}
 				}
-				create_win( lc, new line_management_gui_t(line, player, -1), w_info, (ptrdiff_t)line.get_rep(), true );
+				create_win( lc, new line_management_gui_t(line, player, -1), w_info, (ptrdiff_t)line.get_rep() );
 			}
 		}
 		scl.set_selection( -1 );

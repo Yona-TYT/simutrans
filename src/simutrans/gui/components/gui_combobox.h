@@ -49,6 +49,9 @@ private:
 	// true to allow buttons to wrap around selection
 	bool wrapping:1;
 
+	// try to shrink to minimum size even if there is more space
+	bool minimize:1;
+
 	// offset of last draw call, needed to decide, where to open droplist
 	scr_coord last_draw_offset;
 
@@ -101,7 +104,7 @@ public:
 	/**
 	 * return number of elements in droplist
 	 */
-	int count_elements() const { return droplist.get_count(); }
+	uint32 count_elements() const { return droplist.get_count(); }
 
 	/**
 	 * return element at index from droplist
@@ -130,6 +133,8 @@ public:
 	void set_pos(scr_coord pos_par) OVERRIDE;
 
 	void set_size(scr_size size) OVERRIDE;
+
+	void set_minimize(bool m) { minimize = m; }
 
 	/**
 	 * called when the focus should be released

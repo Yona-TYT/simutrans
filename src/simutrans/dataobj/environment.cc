@@ -26,10 +26,12 @@ std::string env_t::pak_name;
 sint16 env_t::menupos = MENU_TOP;
 bool env_t::single_toolbar_mode = false;
 sint16 env_t::dpi_scale = 100;
+bool env_t::single_info = 1;
 #else
 sint16 env_t::menupos = MENU_BOTTOM;
 bool env_t::single_toolbar_mode = true;
 sint16 env_t::dpi_scale = -1;
+bool env_t::single_info = 0;
 #endif
 sint16 env_t::fullscreen = WINDOWED;
 sint16 env_t::display_scale_percent = 100;
@@ -111,6 +113,7 @@ uint8 env_t::chat_window_transparency = 75;
 bool env_t::hide_rail_return_ticket = true;
 
 bool env_t::numpad_always_moves_map = true;
+bool env_t::leftdrag_in_minimap = true;
 
 // only used internally => do not touch further
 bool env_t::quit_simutrans = false;
@@ -140,7 +143,6 @@ bool env_t::tree_info;
 bool env_t::ground_info;
 uint8 env_t::show_factory_storage_bar;
 bool env_t::townhall_info;
-bool env_t::single_info;
 bool env_t::single_line_gui;
 bool env_t::window_buttons_right;
 bool env_t::second_open_closes_win;
@@ -344,6 +346,23 @@ void env_t::init()
 	listen.append_unique("::");
 	listen.append_unique("0.0.0.0");
 	show_money_message = 0;
+
+#ifndef __ANDROID__
+	env_t::menupos = MENU_TOP;
+	env_t::single_toolbar_mode = false;
+	env_t::dpi_scale = 100;
+	env_t::single_info = 1;
+	env_t::hide_keyboard = false;
+
+#else
+	// here for Android
+	env_t::menupos = MENU_BOTTOM;
+	env_t::single_toolbar_mode = true;
+	env_t::dpi_scale = -1;
+	env_t::single_info = 0;
+	// autoshow keyboard on textinput
+	env_t::hide_keyboard = true;
+#endif
 }
 
 
@@ -613,6 +632,9 @@ void env_t::rdwr(loadsave_t *file)
 		}
 		file->rdwr_bool(random_pedestrians);
 		file->rdwr_bool(stop_pedestrians);
+	}
+	if (file->is_version_atleast(124, 2)) {
+		file->rdwr_bool(leftdrag_in_minimap);
 	}
 
 	// server settings are not saved, since they are server specific

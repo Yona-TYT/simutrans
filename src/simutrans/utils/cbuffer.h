@@ -16,12 +16,12 @@ class cbuffer_t
 {
 private:
 
-	unsigned int capacity;
+	size_t capacity;
 
 	/**
 	* Number of characters without(!) trailing '\0'
 	*/
-	unsigned int size;
+	size_t size;
 
 	char *buf;
 
@@ -76,6 +76,11 @@ public:
 	 *  (e.g. it should be equivalent to the output of strlen())
 	 */
 	void append(const char* text, size_t maxchars);
+
+	/**
+	 * Removes all trailing whitespaces
+	 */
+	void rtrim();
 
 	/**
 	 * Return contents of buffer

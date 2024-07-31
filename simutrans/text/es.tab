@@ -12,7 +12,7 @@ Prop-Latin1.bdf
 #                             Language: es Espanol                             #
 #                             Encoding: ISO-8859-1                             #
 #                             Font: Prop-Latin1.bdf                            #
-#                            Date Created: 5.05 2024                           #
+#                           Date Created: 20.07 2024                           #
 #                                                                              #
 ################################################################################
 #__________________________________button_text__________________________________
@@ -427,8 +427,6 @@ Line Filter
 Filtro de Línea
 #_________________________________program_text__________________________________
 #_________________________________program_text__________________________________
-...
-?
 (%.2f$/km %.2f$/m)
 (%.2f$/km %.2f$/mes)
 (%i)-
@@ -539,8 +537,6 @@ Antigüedad: %i años y %i meses.
 <Limpiar itinerario>
 <create new line>
 <Crear línea nueva>
-<em>%C</em> - %s<br>\n
-[<em>%C</em>]: %s<br>\n
 <em>%s</em> - %s<br>\n
 [<em>%s</em>]: %s<br>\n
 <h1>Error</h1><p><strong>
@@ -1003,8 +999,6 @@ December
 Diciembre
 decrease underground view level
 Bajar nivel de vista subterránea
-Default.sve
-Predeterminado
 Del Stop
 Eliminar
 Delete Line

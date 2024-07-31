@@ -113,6 +113,7 @@ const char* scenario_t::init( const char *scenario_base, const char *scenario_na
 		buf.clear();
 		buf.printf("%s.sve", scenario_name.c_str());
 		welt->get_settings().set_filename( strdup(buf) );
+		welt->type_of_generation = karte_t::SCENARIO_WORLD;
 		// re-initialize coordinate and rotation handling
 		script_api::coordinate_transform_t::initialize();
 	}
@@ -131,6 +132,7 @@ const char* scenario_t::init( const char *scenario_base, const char *scenario_na
 	// register ourselves
 	welt->set_scenario(this);
 	welt->get_message()->clear();
+	welt->get_chat_message()->clear();
 
 	// set start time
 	sint32 const time = welt->get_current_month();
@@ -448,6 +450,7 @@ bool scenario_t::is_tool_allowed(const player_t* player, uint16 tool_id, sint16 
 	return true;
 }
 
+
 const char* scenario_t::is_work_allowed_here(const player_t* player, uint16 tool_id, sint16 wt, koord3d pos)
 {
 	if (what_scenario != SCRIPTED  &&  what_scenario != SCRIPTED_NETWORK) {
@@ -541,6 +544,22 @@ const char* scenario_t::is_convoy_allowed(const player_t* player, convoihandle_t
 	return NULL;
 
 }
+
+
+bool scenario_t::is_tool_enabled(const player_t * player, uint16 tool_id, sint16 wt)
+{
+	if (what_scenario != SCRIPTED  &&  what_scenario != SCRIPTED_NETWORK) {
+		return true;
+	}
+	// then call script if available
+	if (what_scenario == SCRIPTED) {
+		bool ok = true;
+		const char* err = script->call_function(script_vm_t::FORCE, "is_tool_active", ok, (uint8)(player ? player->get_player_nr() : PLAYER_UNOWNED), tool_id, wt);
+		return err != NULL || ok;
+	}
+	return true;
+}
+
 
 const char* scenario_t::jump_to_link_executed(koord3d pos)
 {

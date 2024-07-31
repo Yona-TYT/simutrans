@@ -26,6 +26,7 @@ gui_combobox_t::gui_combobox_t(gui_scrolled_list_t::item_compare_func cmp) :
 	gui_component_t(true),
 	droplist(gui_scrolled_list_t::listskin, cmp)
 {
+	minimize = false;
 	bt_prev.set_typ(button_t::arrowleft);
 	bt_prev.set_pos( scr_coord(0,2) );
 
@@ -81,7 +82,7 @@ DBG_MESSAGE("event","HOWDY!");
 			if(IS_LEFTRELEASE(ev)) {
 				bt_next.pressed = false;
 				value_t p;
-				set_selection( droplist.get_selection() < droplist.get_count() - 1 ? droplist.get_selection() + 1 : wrapping ? 0 : droplist.get_count() - 1 );
+				set_selection( droplist.get_selection() < (sint32)droplist.get_count() - 1 ? droplist.get_selection() + 1 : wrapping ? 0 : droplist.get_count() - 1 );
 				p.i = droplist.get_selection();
 				call_listeners(p);
 			}
@@ -104,7 +105,7 @@ DBG_MESSAGE("event","HOWDY!");
 			set_selection(  sel > 0 ? sel-1 : (wrapping ? droplist.get_count()-1 : 0) );
 		}
 		else {
-			set_selection( sel < droplist.get_count()-1 ? sel+1 : (wrapping ? 0 : droplist.get_count()-1) );
+			set_selection( sel < (sint32)droplist.get_count()-1 ? sel+1 : (wrapping ? 0 : droplist.get_count()-1) );
 		}
 		value_t p;
 		p.i = droplist.get_selection();
@@ -385,7 +386,7 @@ scr_size gui_combobox_t::get_min_size() const
 {
 	scr_size bl = bt_prev.get_min_size();
 	scr_size ti = textinp.get_min_size();
-	scr_size sl = droplist.get_min_size();
+	scr_size sl = droplist.get_container_min_size();
 	scr_size br = bt_next.get_min_size();
 
 	if (sl.w == scr_size::inf.w) {
@@ -401,8 +402,10 @@ scr_size gui_combobox_t::get_min_size() const
 scr_size gui_combobox_t::get_max_size() const
 {
 	scr_size msize = get_min_size();
-	msize.w = droplist.get_max_size().w;
-
+	if (!minimize) {
+		// expand as much as one can
+		msize.w = droplist.get_max_size().w;
+	}
 	return msize;
 }
 

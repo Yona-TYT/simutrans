@@ -38,6 +38,7 @@ class settings_t
 	friend class settings_routing_stats_t;
 	friend class settings_economy_stats_t;
 	friend class settings_costs_stats_t;
+	friend class settings_frame_t;
 	friend class settings_climates_stats_t;
 	friend class climate_gui_t;
 	friend class welt_gui_t;
@@ -351,8 +352,12 @@ public:
 	sint32 way_count_90_curve;
 	sint32 way_count_slope;
 	sint32 way_count_tunnel;
+	sint32 way_count_no_way;
+	sint32 way_count_avoid_crossings;
+	sint32 way_count_leaving_way;
+	sint32 way_count_maximum;
+	sint32 way_count_way_parallel;
 	uint32 way_max_bridge_len;
-	sint32 way_count_leaving_road;
 
 	// 0 = empty, otherwise some value from simplay
 	uint8 player_type[MAX_PLAYER_COUNT];
@@ -648,6 +653,9 @@ public:
 
 	bool get_stop_halt_as_scheduled() const { return stop_halt_as_scheduled; }
 	void set_stop_halt_as_scheduled(bool b) { stop_halt_as_scheduled = b; }
+
+	// some settigns are not to be saved in the global settings
+	void reset_after_global_settings_reload();
 };
 
 #endif

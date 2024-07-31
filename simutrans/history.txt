@@ -1,14 +1,56 @@
+Release of 124.2.1 (r11365 on 25-July-2024):
+	FIX: player_ranking transport type was not set_rigid => crash on all general comparison
+	FIX: do not carry over old chat messages to new games
+	CHG: when merging stops, keep the name of the bigger stop
+	FIX: insticky bottom on drag to allow scrolling of chat
+	FIX: too many null mouse moving events in SDL2 broke double clicks
+	CHG: double click copies chat text
+	FIX: wrong colors and double messges for private chat messages
+	FIX: was not iterating over all stops correctly => wrong passengers spawned
+
+
+Release of 124.2 (r11351 on 20-July-2024):
+	FIX: BASE_DIR/config/simuconf.tab was not read when "-singleuser" was used
+	FIX: right button scrolling on minimap was broken
+	ADD: new option leftdrag_in_minimap in simuconf.tab to allow dragging in minimap with left mouse button (now default)
+	FIX: reenable dragging of stations
+	FIX: Cargo not always loading onto vehicles in large games
+	CHG: Reconnect to network games unless kicked out with desync
+	CHG: Allow again building roads through other people halts but do not take road ownership afterwards
+	FIX: Always have topped or new windows on the screen
+	FIX: Saving discarded the newest messages
+	FIX: number of players online in chat window now correct (and also showing offline state)
+	ADD: prefer to build parallel ways, if starting next to an existing way
+	FIX: overflow in bits in private way sign could allow/deny unexpectant players
+	FIX: loading pak from savegame again (so only savegame needed on commandline)
+	CHG: Activate input field if chat is active or after sending message
+	ADD: restore open windows when rejoining a network game
+	ADD: restore pakset symbols after changing the gui skin
+	CHG: don't save default player colours with the settings/game, use pakset simuconf.tab only
+	CHG: if only_single_info=0 now tiling the info windows. If there is a convoi or halt, not way or other info will be shown (default for Android)
+	CHG: Try to resize windows if they do not fit on screen
+	CHG: Continue game on banner will really continue a game and not destroy the current one by loading an older version
+	CHG: Better support for narrow but high (portrait) screens
+	CHG: A new game always uses the settigns from the simuconf.tab. Use the buttons in the extended settings to load other values
+	ADD: new simple tool 42 for toggle day night view
+	CHG: line list, load dialoges and online game windows shrunk in width
+	ADD: left moving minimap insted of dragging location to have easier use with touch devices
+
+
+Release of 124.1 (r11272 on 3-June-2024):
 	FIX: Cannot build ship depots on dead-end canal or river tiles
 	CHG: Freetype library is now a required dependency for non-server builds (previously it was optional)
-	FIX: Possible crash on systems with more than 12 logical cores
+	FIX: Possible crash for systems with more than 12 logical cores
 	FIX: In-game pakset installer does not download paksets, caused by incorrect handling of HTTP response
 	FIX: Required data directories not created on first installation on Windows
+	FIX: passenger AI crashed the game
 	FIX: renaming town crashed, and renaming factories was almost impossible, renaming convoys still required enter
 	FIX: New world tool had wrong tooltip and hide building was never in selected state
 	ADD: (ranran) new chat window (dialog tool 36) and chat message system using direct and company chat options as well
 	CHG/FIX: Updating the line schedule of a convoi bound to this line will overwrite any pending changes from that schedule if open in the schedule window
 	FIX: dimensions of info windows more approprioate again
 	ADD: (ranran) player ranking frame as dialog tool 37
+	ADD: help files will be also searched in pak set text directories
 
 
 Release of 124.0 (r11164 on 5-May-2024):

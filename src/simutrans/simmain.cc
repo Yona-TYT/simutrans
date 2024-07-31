@@ -1,5 +1,4 @@
-/*
- * This file is part of the Simutrans project under the Artistic License.
+/* This file is part of the Simutrans project under the Artistic License.
  * (see LICENSE.txt)
  */
 
@@ -562,7 +561,7 @@ int simu_main(int argc, char** argv)
 	char path_to_simuconf[24];
 	// was  config/simuconf.tab
 	sprintf( path_to_simuconf, "config%ssimuconf.tab", PATH_SEPARATOR );
-	if(  not_portable  &&  simuconf.open( path_to_simuconf )  ) {
+	if(  simuconf.open( path_to_simuconf )  ) {
 		tabfileobj_t contents;
 		simuconf.read( contents );
 		// use different save directories
@@ -622,8 +621,7 @@ int simu_main(int argc, char** argv)
 				env_t::default_settings.rdwr(&settings_file);
 				settings_file.close();
 				// reset to false (otherwise these settings will persist)
-				env_t::default_settings.set_freeplay( false );
-				env_t::default_settings.set_allow_player_change( true );
+				env_t::default_settings.reset_after_global_settings_reload();
 				env_t::server_announce = 0;
 			}
 		}
@@ -675,7 +673,7 @@ int simu_main(int argc, char** argv)
 #ifdef __ANDROID__
 	// always save and reload on Android
 	env_t::reload_and_save_on_quit = true;
-#elif STEAM_BUILT
+#elif defined(STEAM_BUILT) && STEAM_BUILT != 0
 	steam_t::get_instance()->install_workshop_items();
 #endif
 
@@ -713,12 +711,15 @@ int simu_main(int argc, char** argv)
 		if( const char* pak = args.gimme_arg( "-objects", 1 ) ) {
 			if( set_pakdir( pak ) ) {
 				env_t::pak_name = pak;
+				if (env_t::pak_name.back() == '/') {
+					env_t::pak_name.pop_back();
+				}
 				env_t::pak_name += PATH_SEPARATOR;
 			}
 		}
 	}
 
-	if(  env_t::pak_dir.empty()  ) {
+	if(  env_t::pak_name.empty()  ) {
 		if(  const char *filename = args.gimme_arg("-load", 1)  ) {
 			// try to get a pak file path from a savegame file
 			// read pak_extension from file
@@ -729,7 +730,7 @@ int simu_main(int argc, char** argv)
 			if(  test.rd_open(fn.c_str()) == loadsave_t::FILE_STATUS_OK  ) {
 				// add pak extension
 				const char *pak = test.get_pak_extension();
-				if(  !STRICMP(pak,"(unknown)")  ) {
+				if(  strcmp(pak,"(unknown)")!=0  ) {
 					if( set_pakdir( pak ) ) {
 						env_t::pak_name = pak;
 						env_t::pak_name += PATH_SEPARATOR;
@@ -933,19 +934,22 @@ int simu_main(int argc, char** argv)
 
 	// prepare skins first
 	bool themes_ok = false;
-	if(  const char *themestr = args.gimme_arg("-theme", 1)  ) {
-		dr_chdir( env_t::user_dir );
-		dr_chdir( "themes" );
+	if (const char* themestr = args.gimme_arg("-theme", 1)) {
+		dr_chdir(env_t::user_dir);
+		dr_chdir("themes");
 		themes_ok = gui_theme_t::themes_init(themestr, true, false);
-		if(  !themes_ok  ) {
-			dr_chdir( env_t::base_dir );
-			dr_chdir( "themes" );
+		if (!themes_ok) {
+			dr_chdir(env_t::base_dir);
+			dr_chdir("themes");
 			themes_ok = gui_theme_t::themes_init(themestr, true, false);
 		}
 	}
 	// next try the last used theme
+	skinverwaltung_t::save_all_skins(); // save empty to have the pakset default
 	if(  !themes_ok  &&  env_t::default_theme.c_str()!=NULL  ) {
 		dr_chdir( env_t::user_dir );
+		dr_remove("settings_old.xml");
+		dr_rename("settings.xml", "settings_old.xml"); // or we are stuck on a broken theme forever
 		dr_chdir( "themes" );
 		themes_ok = gui_theme_t::themes_init( env_t::default_theme, true, false );
 		if(  !themes_ok  ) {
@@ -953,6 +957,7 @@ int simu_main(int argc, char** argv)
 			dr_chdir( "themes" );
 			themes_ok = gui_theme_t::themes_init( env_t::default_theme, true, false );
 		}
+		dr_rename("settings_old.xml", "settings.xml"); // or we are stuck on a broken theme forever
 	}
 	// specified themes not found => try default themes
 #if COLOUR_DEPTH != 0
@@ -1167,7 +1172,9 @@ int simu_main(int argc, char** argv)
 	tool_t::init_menu();
 
 	// loading all objects in the pak
+	skinverwaltung_t::restore_all_skins(); // restore empty skins to have the pakset default
 	pakset_manager_t::load_pakset(env_t::default_settings.get_with_private_paks());
+	skinverwaltung_t::save_all_skins(); // save pakset default
 
 	// load tool scripts
 	dbg->message("simu_main()","Reading tool scripts ...");
@@ -1318,6 +1325,20 @@ int simu_main(int argc, char** argv)
 		if( dr_rename(pak_name.c_str(), "temp-load.sve") == 0 ) {
 			loadgame = "temp-load.sve";
 			new_world = false;
+		}
+		else {
+			// test if rejoin server game
+			pak_name.erase(pak_name.length() - 3);
+			pak_name.append("net");
+			if (dr_rename(pak_name.c_str(), "temp-load.sve") == 0) {
+				if (FILE *f = dr_fopen("temp-load.sve", "r")) {
+					char servername[2048];
+					fgets(servername, 2048, f);
+					fclose(f);
+					loadgame = servername;
+					new_world = false;
+				}
+			}
 		}
 		env_t::restore_UI = true;
 	}
@@ -1474,7 +1495,7 @@ int simu_main(int argc, char** argv)
 		}
 	}
 
-	if(  scen == NULL && (loadgame==""  ||  !welt->load(loadgame.c_str()))  ) {
+	if(  scen == NULL  &&  (loadgame==""  ||  !welt->load(loadgame.c_str()))  ) {
 		// create a default map
 		DBG_MESSAGE("simu_main()", "Init with default map (failing will be a pak error!)");
 
@@ -1520,9 +1541,30 @@ int simu_main(int argc, char** argv)
 			// just init view (world was loaded from file)
 			intr_set_view(view);
 			win_set_world(welt);
+			welt->type_of_generation = karte_t::RESTORED_WORLD;
 		}
 
 		tool_t::toolbar_tool[0]->init(welt->get_active_player());
+
+		if (env_t::networkmode) {
+			// try to restore windows
+			loadsave_t file;
+			std::string name("autosave-");
+			name.append(env_t::pak_name);
+			name.erase(name.length() - 1);
+			name.append(".net.sve");
+			dr_remove("temp-load.sve"); // we load under tempary name if there was a crash => no reloading next time
+			if (!dr_rename(name.c_str(),"temp-load.sve")  &&  file.rd_open("temp-load.sve") == loadsave_t::FILE_STATUS_OK) {
+				uint8 pn;
+				intr_disable();
+				file.rdwr_byte(pn);
+				welt->switch_active_player(pn, true);
+				rdwr_all_win(&file);
+				intr_enable();
+			}
+			// rename back, so we could get the same windows after a desync (when using the commandline to join)
+			dr_rename( "temp-load.sve", name.c_str() );
+		}
 	}
 
 	welt->set_fast_forward(false);
@@ -1586,6 +1628,7 @@ int simu_main(int argc, char** argv)
 
 	if(  !env_t::networkmode  &&  !env_t::server  &&  new_world  ) {
 		welt->get_message()->clear();
+		welt->get_chat_message()->clear();
 	}
 #ifdef USE_FLUIDSYNTH_MIDI
 	if(  strcmp( env_t::soundfont_filename.c_str(), "Error" ) == 0  ) {
@@ -1602,7 +1645,7 @@ int simu_main(int argc, char** argv)
 #if COLOUR_DEPTH != 0
 		if(  new_world  ) {
 			dbg->message("simu_main()", "Show banner ... " );
-			ticker::add_msg("Welcome to Simutrans", koord3d::invalid, PLAYER_FLAG | color_idx_to_rgb(COL_SOFT_BLUE));
+			ticker::add_msg("Welcome to Simutrans", koord3d::invalid, PLAYER_FLAG | 1);
 			modal_dialogue( new banner_t(), magic_none, welt, never_quit, true );
 			// only show new world, if no other dialogue is active ...
 			new_world = win_get_open_count()==0;
@@ -1613,7 +1656,7 @@ int simu_main(int argc, char** argv)
 		welt->get_message()->set_message_flags(env_t::message_flags[0], env_t::message_flags[1], env_t::message_flags[2], env_t::message_flags[3]);
 
 		if (pakset_manager_t::needs_doubled_warning_message()) {
-			welt->get_message()->add_message(pakset_manager_t::get_doubled_warning_message(), koord3d::invalid, message_t::general | message_t::do_not_rdwr_flag);
+			welt->get_message()->add_message(pakset_manager_t::get_doubled_warning_message(), koord3d::invalid, message_t::general | message_t::DO_NOT_SAVE_MSG);
 		}
 
 		if(  !env_t::networkmode  &&  !env_t::server  ) {

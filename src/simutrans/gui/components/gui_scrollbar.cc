@@ -18,12 +18,12 @@
 scrollbar_t::scrollbar_t(type_t type) :
 	type(type),
 	dragging(false),
+	sticky_bottom(false),
 	knob_offset(0),
 	knob_size(10),
 	total_size(20),
 	knob_scroll_amount(LINESPACE), // equals one line
-	knob_scroll_discrete(false),
-	sticky_bottom(false)
+	knob_scroll_discrete(false)
 {
 	visible_mode = show_auto;
 
@@ -89,9 +89,9 @@ scr_size scrollbar_t::get_max_size() const
 
 
 
-void scrollbar_t::set_sticky_bottom()
+void scrollbar_t::set_sticky_bottom(bool b)
 {
-	sticky_bottom = true;
+	sticky_bottom = b;
 	reposition_buttons();
 }
 

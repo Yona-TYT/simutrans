@@ -51,7 +51,6 @@ size_t gui_textinput_t::calc_cursor_pos(const int x)
 {
 	size_t new_cursor_pos = 0;
 	if(  text  ) {
-
 		const char* tmp_text = text;
 		uint8 byte_length = 0;
 		uint8 pixel_width = 0;
@@ -73,8 +72,9 @@ size_t gui_textinput_t::calc_cursor_pos(const int x)
 bool gui_textinput_t::remove_selection()
 {
 	if(  head_cursor_pos!=tail_cursor_pos  ) {
+		size_t len = strlen(text);
 		size_t start_pos = min(head_cursor_pos, tail_cursor_pos);
-		size_t end_pos = ::max(head_cursor_pos, tail_cursor_pos);
+		size_t end_pos = min(len, ::max(head_cursor_pos, tail_cursor_pos) );
 		tail_cursor_pos = head_cursor_pos = start_pos;
 		do {
 			text_dirty = true;
@@ -493,7 +493,7 @@ bool gui_textinput_t::infowin_event(const event_t *ev)
 		}
 	}
 	else if(  IS_LEFTTPLCLK(ev)  ) {
-		// since now the focus could be received while the mouse  no there, we must release it
+		// since now the focus could be received while the mouse not there, we must release it
 		scr_rect this_comp( get_size() );
 		if(  !this_comp.contains(scr_coord(ev->click_pos.x,ev->click_pos.y) )  ) {
 			// not us, just in old focus from previous selection or tab
@@ -561,7 +561,6 @@ void gui_textinput_t::display_with_focus(scr_coord offset, bool has_focus)
 			cursor_reference_time = dr_time();
 
 			dr_start_textinput();
-
 			const scr_coord gui_xy = win_get_pos( win_get_top() );
 			const scr_coord_val x = pos.x + gui_xy.x + get_current_cursor_x();
 			const scr_coord_val y = pos.x + gui_xy.y + D_TITLEBAR_HEIGHT;
@@ -582,6 +581,12 @@ void gui_textinput_t::display_with_cursor(scr_coord offset, bool cursor_active, 
 	display_img_stretch( gui_theme_t::editfield, scr_rect( pos+offset, size ) );
 
 	if(  text  ) {
+
+		if (head_cursor_pos == 0xFFFF) {
+			// since before the first draw, the text was likely not set correctly
+			head_cursor_pos = strlen(text);
+		}
+
 		// recalculate scroll offset
 		const int text_width = proportional_string_width(text);
 		const scr_coord_val view_width = size.w - 3;
@@ -656,7 +661,7 @@ void gui_textinput_t::display_with_cursor(scr_coord offset, bool cursor_active, 
 			// display selected text block with light grey text on charcoal bounding box
 			if(  head_cursor_pos!= tail_cursor_pos  ) {
 				const size_t start_pos = min(head_cursor_pos, tail_cursor_pos);
-				const size_t end_pos = ::max(head_cursor_pos, tail_cursor_pos);
+				size_t end_pos = ::max(head_cursor_pos, tail_cursor_pos);
 				const scr_coord_val start_offset = proportional_string_len_width(text, start_pos);
 				const scr_coord_val highlight_width = proportional_string_len_width(text+start_pos, end_pos-start_pos);
 				display_fillbox_wh_clip_rgb(x_base_offset+start_offset, y_offset, highlight_width, LINESPACE, SYSCOL_EDIT_BACKGROUND_SELECTED, true);
@@ -676,18 +681,18 @@ void gui_textinput_t::display_with_cursor(scr_coord offset, bool cursor_active, 
 
 
 
-void gui_textinput_t::set_text(char *text, size_t max)
+void gui_textinput_t::set_text(char *t, size_t max)
 {
-	this->text = text;
+	char *old_text = text;
+	this->text = t;
 	this->max = max;
-	// whole text is selected by default
-	size_t len = strlen(text);
-	if (tail_cursor_pos == head_cursor_pos) {
+
+	if (old_text  &&   tail_cursor_pos == head_cursor_pos) {
 		// if same, keep positions
 	}
 	else {
 		// whole text is selected by default
-		head_cursor_pos = strlen(text);
+		head_cursor_pos = 0xFFFF;
 		tail_cursor_pos = 0;
 	}
 	text_dirty = false;

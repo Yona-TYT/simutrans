@@ -38,6 +38,7 @@
 #include "../gui/simwin.h"
 #include "simworld.h"
 #include "../sys/simsys.h"
+#include "../simachievements.h"
 
 #include "../tpl/vector_tpl.h"
 #include "../tpl/binary_heap_tpl.h"
@@ -677,6 +678,8 @@ void karte_t::init_tiles()
 	scenario = new scenario_t(this);
 
 	nosave_warning = nosave = false;
+
+	type_of_generation = AUTO_GENERATED;
 
 	if (env_t::server) {
 		nwc_auth_player_t::init_player_lock_server(this);
@@ -1327,6 +1330,9 @@ DBG_DEBUG("karte_t::init()","built timeline");
 	active_player_nr = HUMAN_PLAYER_NR;
 	active_player = players[HUMAN_PLAYER_NR];
 	tool_t::update_toolbars();
+
+	msg->clear();
+	chat_msg->clear();
 
 	set_dirty();
 	step_mode = PAUSE_FLAG;
@@ -2110,6 +2116,7 @@ void karte_t::call_change_player_tool(uint8 cmd, uint8 player_nr, uint16 param, 
 		network_send_server(nwc);
 	}
 	else {
+		clear_random_mode(INTERACTIVE_RANDOM); // beacue the AI will call random to check where it can run
 		change_player_tool(cmd, player_nr, param, !get_public_player()->is_locked()  ||  scripted_call, true);
 		// update the window
 		ki_kontroll_t* playerwin = (ki_kontroll_t*)win_get_magic(magic_ki_kontroll_t);
@@ -2198,7 +2205,7 @@ void karte_t::set_tool_api( tool_t *tool_in, player_t *player, bool& suspended)
 	}
 	// check for password-protected players
 	if(  (!tool_in->is_init_keeps_game_state()  ||  !tool_in->is_work_keeps_game_state())  &&  needs_check  &&
-		 !(tool_in->get_id()==(TOOL_CHANGE_PLAYER|SIMPLE_TOOL)  ||  tool_in->get_id()==(TOOL_ADD_MESSAGE | GENERAL_TOOL))  &&
+		 !(tool_in->get_id() == (DIALOG_LOAD | DIALOGE_TOOL)  ||  tool_in->get_id() == (TOOL_CHANGE_PLAYER | SIMPLE_TOOL)  ||  tool_in->get_id()==(TOOL_ADD_MESSAGE | GENERAL_TOOL))  &&
 		 player  &&  player->is_locked()  ) {
 		// player is currently password protected => request unlock first
 		create_win(new password_frame_t(player), w_info, magic_pwd_t + player->get_player_nr() );
@@ -3307,7 +3314,7 @@ void karte_t::step()
 		last_clients = socket_list_t::get_playing_clients();
 		// add message via tool
 		cbuffer_t buf;
-		buf.printf("%d,", chat_message_t::do_not_rdwr_flag | chat_message_t::do_not_log_flag);
+		buf.printf("%d,", chat_message_t::DO_NOT_SAVE_MSG | chat_message_t::DO_NO_LOG_MSG);
 		buf.printf(translator::translate("Now %u clients connected.", settings.get_name_language_id()), last_clients);
 		tool_t *tmp_tool = create_tool( TOOL_ADD_MESSAGE | GENERAL_TOOL );
 		tmp_tool->set_default_param( buf );
@@ -3705,6 +3712,10 @@ DBG_MESSAGE("karte_t::save(loadsave_t *file)", "motd filename %s", env_t::server
 		chat_msg->rdwr(file);
 	}
 
+	if (file->is_version_atleast(124, 2)) {
+		records->rdwr(file);
+	}
+
 	file->rdwr_byte( active_player_nr );
 
 	// save all open windows (upon request)
@@ -4055,6 +4066,7 @@ void karte_t::load(loadsave_t *file)
 	}
 	else if(  !env_t::networkmode  ) {
 		msg->clear();
+		chat_msg->clear();
 	}
 DBG_MESSAGE("karte_t::load()", "messages loaded");
 
@@ -4247,6 +4259,10 @@ DBG_MESSAGE("karte_t::load()", "%d factories loaded", fab_list.get_count());
 	}
 	else {
 		// maybe move messages into chat_messages?
+	}
+
+	if (file->is_version_atleast(124, 2)) {
+		records->rdwr(file);
 	}
 
 	if(  file->is_version_atleast(102, 4)  ) {
@@ -5596,7 +5612,7 @@ void karte_t::switch_active_player(uint8 new_player, bool silent)
 			// tell the player
 			cbuffer_t buf;
 			buf.printf( translator::translate("Now active as %s.\n"), get_active_player()->get_name() );
-			msg->add_message(buf, koord3d::invalid, message_t::ai | message_t::do_not_rdwr_flag, PLAYER_FLAG|get_active_player()->get_player_nr(), IMG_EMPTY);
+			msg->add_message(buf, koord3d::invalid, message_t::ai | message_t::DO_NOT_SAVE_MSG, PLAYER_FLAG|get_active_player()->get_player_nr(), IMG_EMPTY);
 		}
 
 		// update menu entries
@@ -5655,20 +5671,44 @@ void karte_t::stop(bool exit_game)
 			world->save(fn, false, SAVEGAME_VER_NR, false);
 			env_t::restore_UI = old_restore_UI;
 		}
-		else if (env_t::reload_and_save_on_quit && !env_t::networkmode) {
-			// save current game, if not online
-			bool old_restore_UI = env_t::restore_UI;
-			env_t::restore_UI = true;
+		else if (env_t::reload_and_save_on_quit) {
+			if (env_t::networkmode) {
+				// construct from pak name an autosave if requested
+				std::string pak_name("autosave-");
+				pak_name.append(env_t::pak_name);
+				pak_name.erase(pak_name.length() - 1);
+				pak_name.append(".net");
 
-			// construct from pak name an autosave if requested
-			std::string pak_name("autosave-");
-			pak_name.append(env_t::pak_name);
-			pak_name.erase(pak_name.length() - 1);
-			pak_name.append(".sve");
+				FILE *f = dr_fopen(pak_name.c_str(), "w");
+				fputs(settings.get_filename(), f);
+				fclose(f);
 
-			dr_chdir(env_t::user_dir);
-			world->save(pak_name.c_str(), true, SAVEGAME_VER_NR, false);
-			env_t::restore_UI = old_restore_UI;
+				// save windows
+				loadsave_t file;
+				pak_name.append(".sve");
+				if (file.wr_open(pak_name.c_str(), loadsave_t::autosave_mode, loadsave_t::autosave_level, env_t::pak_name.c_str(), SAVEGAME_VER_NR) == loadsave_t::FILE_STATUS_OK) {
+					// we could open for writing
+					file.rdwr_byte(active_player_nr);
+					// save all open windows
+					rdwr_all_win(&file);
+				}
+
+			}
+			else {
+				// save current game, if not online
+				bool old_restore_UI = env_t::restore_UI;
+				env_t::restore_UI = true;
+
+				// construct from pak name an autosave if requested
+				std::string pak_name("autosave-");
+				pak_name.append(env_t::pak_name);
+				pak_name.erase(pak_name.length() - 1);
+				pak_name.append(".sve");
+
+				dr_chdir(env_t::user_dir);
+				world->save(pak_name.c_str(), true, SAVEGAME_VER_NR, false);
+				env_t::restore_UI = old_restore_UI;
+			}
 		}
 		destroy_all_win(true);
 	}
@@ -6146,6 +6186,7 @@ bool karte_t::interactive(uint32 quit_month)
 #ifdef STEAM_BUILT
 			steam_t::get_instance()->update_ui(get_last_year(), convoys().get_count());
 #endif
+			simachievements_t::check_state_ach(this);
 			next_misc_time = time + 5000; // every 5s
 		}
 
@@ -6436,8 +6477,7 @@ void karte_t::network_disconnect()
 	create_win({ display_get_width()/2-128, 40 }, new news_img("Lost synchronisation\nwith server."), w_info, magic_none);
 	ticker::add_msg( translator::translate("Lost synchronisation\nwith server."), koord3d::invalid, SYSCOL_TEXT );
 	last_active_player_nr = active_player_nr;
-
-	stop(false);
+	finish_loop = true; // kick me out to main screen
 }
 
 

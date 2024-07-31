@@ -308,7 +308,8 @@ int dr_rename(const char *existing_utf8, const char *new_utf8)
 		DWORD error = GetLastError();
 		if (error == ERROR_FILE_NOT_FOUND) {
 			errno = ENOENT;
-		} else if(error == ERROR_ACCESS_DENIED) {
+		}
+		else if(error == ERROR_ACCESS_DENIED) {
 			errno = EACCES;
 		}
 	}
@@ -716,13 +717,13 @@ std::string dr_get_system_font()
 		// Found a match
 		if (_wcsnicmp(wsFaceName.c_str(), wsValueName.c_str(), wsFaceName.length()) == 0) {
 			// full match
-			wsFontFile.assign((LPWSTR)valueData, valueDataSize);
+			wsFontFile.assign((LPWSTR)valueData, valueDataSize/2);
 			break;
 		}
 
 		// Sometimes the face name is a family name; then only a partial match will be possible
 		if (wcsstr(wsValueName.c_str(), wsFaceName.c_str())) {
-			wsBestMatch.assign((LPWSTR)valueData, valueDataSize);
+			wsBestMatch.assign((LPWSTR)valueData, valueDataSize/2);
 		}
 	} while (result != ERROR_NO_MORE_ITEMS);
 

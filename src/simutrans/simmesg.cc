@@ -9,12 +9,15 @@
 #include "simticker.h"
 #include "display/simgraph.h"
 #include "simcolor.h"
+#include "gui/chat_frame.h"
 #include "gui/simwin.h"
 #include "world/simworld.h"
 
 #include "dataobj/loadsave.h"
+#include "dataobj/translator.h"
 #include "dataobj/environment.h"
 #include "dataobj/pakset_manager.h"
+#include "network/network_socket_list.h"
 #include "player/simplay.h"
 #include "utils/simstring.h"
 #include "tpl/slist_tpl.h"
@@ -27,6 +30,9 @@
 #define MAX_SAVED_MESSAGES (2000)
 
 static karte_ptr_t welt;
+
+static vector_tpl<plainstring>clients;
+
 
 uint32 message_node_t::get_type_shifted() const
 {
@@ -72,7 +78,7 @@ void message_node_t::rdwr(loadsave_t *file)
 }
 
 
-FLAGGED_PIXVAL message_node_t::get_player_color(karte_t *welt) const
+PIXVAL message_node_t::get_player_color(karte_t *welt) const
 {
 	// correct for player color
 	FLAGGED_PIXVAL colorval = color;
@@ -80,7 +86,7 @@ FLAGGED_PIXVAL message_node_t::get_player_color(karte_t *welt) const
 		player_t *player = welt->get_player(color&(~PLAYER_FLAG));
 		colorval = player ? PLAYER_FLAG+color_idx_to_rgb(player->get_player_color1()+env_t::gui_player_color_dark) : color_idx_to_rgb(MN_GREY0);
 	}
-	return colorval;
+	return (PIXVAL)colorval;
 }
 
 
@@ -127,6 +133,8 @@ void message_t::clear()
 		delete list.remove_first();
 	}
 	ticker::clear_messages();
+	clients.clear();
+	clients.append(env_t::nickname.c_str());
 }
 
 
@@ -283,40 +291,31 @@ void message_t::rdwr(loadsave_t* file)
 	uint16 msg_count;
 	if (file->is_saving()) {
 		msg_count = 0;
+		vector_tpl<message_node_t*>msg_to_save;
+		msg_to_save.reserve(list.get_count());
 		if (env_t::server) {
 			// do not save local messages and expired messages
 			uint32 current_time = world()->get_current_month();
 			for (message_node_t* const i : list) {
-				if (i->type & do_not_rdwr_flag || (i->type & expire_after_one_month_flag && current_time - i->time > 1)) {
+				if (i->type & DO_NOT_SAVE_MSG || (i->type & EXPIRE_AFTER_ONE_MONTH_MSG && current_time - i->time > 1)) {
 					continue;
 				}
-				if (++msg_count == MAX_SAVED_MESSAGES) break;
-			}
-			file->rdwr_short(msg_count);
-			for (message_node_t* const i : list) {
-				if (msg_count == 0) break;
-				if (i->type & do_not_rdwr_flag || (i->type & expire_after_one_month_flag && current_time - i->time > 1)) {
-					continue;
-				}
-				i->rdwr(file);
-				msg_count--;
+				msg_to_save.append(i);
 			}
 		}
 		else {
 			// do not save discardable messages (like changing player)
 			for (message_node_t* const i : list) {
-				if (!(i->type & do_not_rdwr_flag)) {
-					if (++msg_count == MAX_SAVED_MESSAGES) break;
+				if (!(i->type & DO_NOT_SAVE_MSG)) {
+					msg_to_save.append(i);
 				}
 			}
-			file->rdwr_short(msg_count);
-			for (message_node_t* const i : list) {
-				if (msg_count == 0) break;
-				if (!(i->type & do_not_rdwr_flag)) {
-					i->rdwr(file);
-					msg_count--;
-				}
-			}
+		}
+		// save only the last MAX_SAVED_MESSAGES
+		msg_count = (uint16)min(MAX_SAVED_MESSAGES, msg_to_save.get_count());
+		file->rdwr_short(msg_count);
+		for (uint32 i = msg_to_save.get_count() - msg_count; i < msg_to_save.get_count(); i++) {
+			msg_to_save[i]->rdwr(file);
 		}
 	}
 	else {
@@ -329,12 +328,11 @@ void message_t::rdwr(loadsave_t* file)
 		while ((msg_count--) > 0) {
 			message_node_t* n = new message_node_t();
 			n->rdwr(file);
+			// maybe add this rather to the chat
 			if (file->is_version_less(124, 1)) {
 				if (n->get_type_shifted() == (1 << message_t::chat)) {
 					char name[256];
 					char msg_no_name[256];
-					bool name_end = false;
-					int msg_start = 0;
 					sint8 player_nr = 0;
 
 					if (char* c = strchr(n->msg, ']')) {
@@ -362,6 +360,8 @@ void message_t::rdwr(loadsave_t* file)
 }
 
 
+
+
 chat_message_t::~chat_message_t()
 {
 	clear();
@@ -380,7 +380,7 @@ void chat_message_t::convert_old_message(const char* text, const char* name, sin
 	chat_node* const n = new chat_node();
 	tstrncpy(n->msg, text, lengthof(n->msg));
 
-	n->flags = chat_message_t::none;
+	n->flags = chat_message_t::NONE;
 	n->pos = pos;
 	n->player_nr = player_nr;
 	n->channel_nr = -1;
@@ -396,33 +396,37 @@ void chat_message_t::add_chat_message(const char* text, sint8 channel, sint8 sen
 	cbuffer_t buf;  // Output which will be printed to ticker
 	player_t* player = world()->get_player(sender_nr);
 	// send this message to a ticker if public channel message
-	if (channel == -1) {
-		if (sender_nr >= 0 && sender_nr != PLAYER_UNOWNED) {
-			if (player) {
-				if (player != world()->get_active_player()) {
+	if (channel >= -1) {
+		if (sender_nr >= 0  &&  sender_nr != PLAYER_UNOWNED) {
+			if (player != world()->get_active_player()) {
+				// so it is not a message sent from us
+				bool show_message = channel == -1; // message for all?
+				show_message |= channel == world()->get_active_player_nr(); // company message for us?
+				show_message |= recipient && strcmp(recipient, env_t::nickname.c_str()) == 0; // private chat for us?
+				if(show_message) {
 					buf.printf("%s: %s", sender_.c_str(), text);
-					ticker::add_msg(buf, koord3d::invalid, SYSCOL_TEXT);
+					ticker::add_msg(buf, koord3d::invalid, PLAYER_FLAG|sender_nr);
 					env_t::chat_unread_public++;
 					sound_play(sound_desc_t::message_sound, 255, TOOL_SOUND);
 				}
 			}
 		}
 	}
-	else if (recipient && strcmp(recipient, env_t::nickname.c_str()) == 0  &&  sender_nr != world()->get_active_player_nr()) {
-		buf.printf("%s>> %s", sender_.c_str(), text);
-		ticker::add_msg(buf, koord3d::invalid, color_idx_to_rgb(COL_RED));
-		env_t::chat_unread_whisper++;
-		sound_play(sound_desc_t::message_sound, 255, TOOL_SOUND);
-	}
-	else if (channel == world()->get_active_player_nr()  &&  sender_nr != world()->get_active_player_nr()) {
-		PIXVAL text_color = player ? color_idx_to_rgb(player->get_player_color1() + env_t::gui_player_color_dark) : SYSCOL_TEXT;
-		buf.printf("%s: %s", sender_.c_str(), text);
-		ticker::add_msg(buf, koord3d::invalid, text_color);
-		env_t::chat_unread_company++;
-		sound_play(sound_desc_t::message_sound, 255, TOOL_SOUND);
+	else if (channel == -2) {
+		// text contains the current nicks, separated by TAB
+		clients.clear();
+		char* nick = strtok((char*)text, "\t");
+		while (nick) {
+			clients.append(nick);
+			nick = strtok(NULL, "\t");
+		}
+		flags |= DO_NO_LOG_MSG|DO_NOT_SAVE_MSG; // not saving this message
+		if (chat_frame_t* cf = (chat_frame_t*)win_get_magic(magic_chatframe)) {
+			cf->fill_list();
+		}
 	}
 
-	if (!(flags & do_not_log_flag)) {
+	if (!(flags & DO_NO_LOG_MSG)) {
 		// we do not allow messages larger than 256 bytes
 		chat_node* const n = new chat_node();
 		tstrncpy(n->msg, text, lengthof(n->msg));
@@ -481,21 +485,19 @@ void chat_message_t::rdwr(loadsave_t* file)
 {
 	uint16 msg_count;
 	if (file->is_saving()) {
-		msg_count = 0;
+		vector_tpl<chat_node*>msg_to_save;
+		msg_to_save.reserve(list.get_count());
 		// do not save discardable messages
 		for (chat_node* const i : list) {
-			if (!(i->flags & do_not_rdwr_flag)) {
-				if (++msg_count == MAX_SAVED_MESSAGES) break;
+			if (!(i->flags & DO_NOT_SAVE_MSG)) {
+				msg_to_save.append(i);
 			}
 		}
+		// save only the last MAX_SAVED_MESSAGES
+		msg_count = (uint16)min(MAX_SAVED_MESSAGES, msg_to_save.get_count());
 		file->rdwr_short(msg_count);
-		for (chat_node* const i : list) {
-			if (msg_count == 0) break;
-			if (i->flags & do_not_rdwr_flag) {
-				continue;
-			}
-			i->rdwr(file);
-			msg_count--;
+		for (uint32 i = msg_to_save.get_count() - msg_count; i < msg_to_save.get_count(); i++) {
+			msg_to_save[i]->rdwr(file);
 		}
 	}
 	else {
@@ -509,4 +511,11 @@ void chat_message_t::rdwr(loadsave_t* file)
 			list.append(n);
 		}
 	}
+}
+
+
+// return the number of connected clients
+const vector_tpl<plainstring>& chat_message_t::get_online_nicks()
+{
+	return clients;
 }

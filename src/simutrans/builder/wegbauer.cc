@@ -299,6 +299,7 @@ void way_builder_t::fill_menu(tool_selector_t *tool_selector, const waytype_t wt
 	if (!welt->get_scenario()->is_tool_allowed(welt->get_active_player(), TOOL_BUILD_WAY | GENERAL_TOOL, rwtyp, styp)) {
 		return;
 	}
+	bool enable = welt->get_scenario()->is_tool_enabled(welt->get_active_player(), TOOL_BUILD_WAY | GENERAL_TOOL, rwtyp);
 
 	const uint16 time = welt->get_timeline_year_month();
 
@@ -316,6 +317,7 @@ void way_builder_t::fill_menu(tool_selector_t *tool_selector, const waytype_t wt
 
 	// now add sorted ways
 	for(way_desc_t const* const i : matching) {
+		i->get_builder()->enabled = enable;
 		tool_selector->add_tool_selector(i->get_builder());
 	}
 }
@@ -472,12 +474,6 @@ bool way_builder_t::check_building( const grund_t *to, const koord dir ) const
 		return true;
 	}
 
-	// check for other player stops
-	halthandle_t halt = to->get_halt();
-	if(halt.is_bound() && !check_owner(halt->get_owner(), player_builder)){
-		return false;
-	}
-
 	// first find all kind of buildings
 	gebaeude_t *building = to->find<gebaeude_t>();
 	if(building==NULL) {
@@ -508,6 +504,20 @@ bool way_builder_t::check_building( const grund_t *to, const koord dir ) const
 	}
 
 	return true;
+}
+
+
+//  helper function for building parallel ways
+bool way_builder_t::has_neighbour_with_way(koord3d pos, waytype_t wt) const
+{
+	for (int i = 0; i < 8; i++) {
+		if (grund_t* gr = welt->lookup(pos + koord::neighbours[i])) {
+			if (gr->get_weg(wt)) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 
@@ -651,27 +661,39 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 		}
 	}
 
-	// universal check for depots/stops/...
-	if(  !check_building( from, zv )  ||  !check_building( to, -zv )  ) {
-		warn_fail = translator::translate("A building blocks the construction");
-		return false;
-	}
+	if ((zv.x | zv.y) != 0) {
+		// the forrowing checks make only sense if we actually connect two tiles
 
-	// universal check for bridges: enter bridges in bridge direction
-	if( to->get_typ()==grund_t::brueckenboden ) {
-		ribi_t::ribi br = ribi_type(zv);
-		br  = to->hat_wege()    ? to->get_weg_nr(0)->get_ribi_unmasked() : (ribi_t::ribi)ribi_t::none;
-		br |= to->get_leitung() ? to->get_leitung()->get_ribi()          : (ribi_t::ribi)ribi_t::none;
-		if(!ribi_t::is_straight(br)) {
+		// universal check for depots/stops/...
+		if(  !check_building( from, zv )  ||  !check_building( to, -zv )  ) {
+			warn_fail = translator::translate("A building blocks the construction");
 			return false;
 		}
-	}
-	if( from->get_typ()==grund_t::brueckenboden ) {
-		ribi_t::ribi br = ribi_type(zv);
-		br  = from->hat_wege()    ? from->get_weg_nr(0)->get_ribi_unmasked() : (ribi_t::ribi)ribi_t::none;
-		br |= from->get_leitung() ? from->get_leitung()->get_ribi()          : (ribi_t::ribi)ribi_t::none;
-		if(!ribi_t::is_straight(br)) {
-			return false;
+
+		// universal check for bridges: enter bridges in bridge direction
+		if( from->get_typ()==grund_t::brueckenboden ) {
+			if (weg_t *w = from->get_weg((waytype_t)(bautyp_mask & bautyp))) {
+				if (ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(w->get_ribi_unmasked())) {
+					return false;
+				}
+			}
+			if ((bautyp_mask & bautyp)==powerline_wt  &&  from->get_leitung()) {
+				if (ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(from->get_leitung()->get_ribi())) {
+					return false;
+				}
+			}
+		}
+		if( to->get_typ()==grund_t::brueckenboden ) {
+			if (weg_t* w = to->get_weg((waytype_t)(bautyp_mask & bautyp))) {
+				if (ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(w->get_ribi_unmasked())) {
+					return false;
+				}
+			}
+			if ((bautyp_mask & bautyp) == powerline_wt  &&  to->get_leitung()) {
+				if (ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(to->get_leitung()->get_ribi())) {
+					return false;
+				}
+			}
 		}
 	}
 
@@ -685,22 +707,23 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 
 	// do not connect to the side of a sloped elevated way if the ground is flat
 	if (from->get_typ() == grund_t::monorailboden  &&  to->get_typ() != grund_t::monorailboden  &&  !from->ist_karten_boden()) {
-		// we try to connect to an elevated way. Only allowed, if both are parallel
-		weg_t* w = to->get_weg(desc->get_wtyp());
-		if (w  &&  ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) == ribi_t::doubles(w->get_ribi_unmasked())) {
-			// we may be allowed to connect here
-		}
-		else {
-			return false;
+		// we try to connect to an elevated way. For bridges, only allowed, if both are parallel
+		if (to->get_typ() == grund_t::brueckenboden) {
+			weg_t* w = to->get_weg(desc->get_wtyp());
+			if (!w  ||  ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(w->get_ribi_unmasked())  ) {
+				// we are not allowed to connect here
+				return false;
+			}
 		}
 	}
 	if (to->get_typ() == grund_t::monorailboden  &&  from->get_typ() != grund_t::monorailboden  &&  !to->ist_karten_boden()) {
-		weg_t* w = to->get_weg(desc->get_wtyp());
-		if (w  &&  ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) == ribi_t::doubles(w->get_ribi_unmasked())) {
-			// we may be allowed to connect here
-		}
-		else {
-			return false;
+		// we try to connect to an elevated way. For bridges, only allowed, if both are parallel
+		if (from->get_typ() == grund_t::brueckenboden) {
+			weg_t* w = to->get_weg(desc->get_wtyp());
+			if (!w  ||  ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(w->get_ribi_unmasked())) {
+				// we are not allowed to connect here
+				return false;
+			}
 		}
 	}
 
@@ -741,12 +764,29 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 			if(to->get_weg_hang()!=to->get_grund_hang()  &&  (str==NULL  ||  !(ribi_t::is_straight(test_ribi) || test_ribi==0 ))) {
 				return false;
 			}
-			// calculate costs
-			*costs = str ? 0 : s.way_count_straight;
-			if((str==NULL  &&  to->hat_wege())  ||  (str  &&  to->has_two_ways())) {
-				*costs += 4; // avoid crossings
+			// test if we are next to a way
+			if (!str  &&  prefer_parallel) {
+				if (to->get_weg(road_wt)) {
+					// we have to join? make it expensive
+					*costs = s.way_count_leaving_way;
+				}
+				else if (has_neighbour_with_way(from->get_pos(), road_wt)) {
+					// we are parallel => make it cheap
+					*costs = s.way_count_straight;
+				}
+				else {
+					// new way not parallel to an existing
+					*costs = s.way_count_no_way;
+				}
 			}
-			if(to->get_weg_hang()!=0  &&  !to_flat) {
+			else {
+				// calculate costs
+				*costs = (!str ^ prefer_parallel) ? s.way_count_no_way : s.way_count_straight;
+			}
+			if((!str  &&  to->hat_wege())  ||  (str  &&  to->has_two_ways())) {
+				*costs += s.way_count_avoid_crossings; // avoid crossings
+			}
+			if (to->get_weg_hang() != 0  &&  !to_flat) {
 				*costs += s.way_count_slope;
 			}
 		}
@@ -772,11 +812,27 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 			if(to->get_weg_hang()!=to->get_grund_hang()  &&  (sch==NULL  ||  !(ribi_t::is_straight(test_ribi) || test_ribi==0 ))) {
 				return false;
 			}
-			// calculate costs
-			*costs = s.way_count_straight;
-			if (!sch) *costs += 1; // only prefer existing rails a little
-			if((sch  &&  to->has_two_ways())  ||  (sch==NULL  &&  to->hat_wege())) {
-				*costs += 4; // avoid crossings
+			// test if we are next to a way
+			if (!sch  &&  prefer_parallel) {
+				if (to->get_weg(track_wt)) {
+					// we have to join? make it expensive
+					*costs = s.way_count_leaving_way;
+				}
+				else if (has_neighbour_with_way(from->get_pos(), track_wt)) {
+					// we are parallel => make it cheap
+					*costs = s.way_count_straight;
+				}
+				else {
+					// new way not parallel to an existing
+					*costs = s.way_count_no_way;
+				}
+			}
+			else {
+				// calculate costs
+				*costs = (!sch ^ prefer_parallel) ? s.way_count_no_way : s.way_count_straight;
+			}
+			if((sch  &&  to->has_two_ways())  ||  (!sch &&  to->hat_wege())) {
+				*costs += s.way_count_avoid_crossings; // avoid crossings
 			}
 			if(to->get_weg_hang()!=0  &&  !to_flat) {
 				*costs += s.way_count_slope;
@@ -803,9 +859,8 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 			}
 			if(ok) {
 				// calculate costs
-				*costs = s.way_count_straight;
-				if (!to->hat_weg(track_wt)) *costs += 1; // only prefer existing rails a little
-				// prefer own track
+				*costs += sch ? s.way_count_straight : s.way_count_no_way;
+				// prefer own track a little more
 				if(to->hat_weg(road_wt)) {
 					*costs += s.way_count_straight;
 				}
@@ -849,7 +904,7 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 				*costs = s.way_count_straight;
 				if(  !to->get_leitung()  ) {
 					// extra malus for not following an existing line or going on ways
-					*costs += s.way_count_double_curve + (to->hat_wege() ? 8 : 0); // prefer existing powerlines
+					*costs += s.way_count_leaving_way + (to->hat_wege() ? s.way_count_avoid_crossings : 0); // prefer existing powerlines
 				}
 			}
 		break;
@@ -861,7 +916,15 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 			ok = canal  ||  !fundament;
 			// calculate costs
 			if(ok) {
-				*costs = to->is_water() ||  canal  ? s.way_count_straight : s.way_count_leaving_road; // prefer water very much
+				if (to->is_water()) {
+					*costs = 0; // prefer water very much
+				}
+				else if (canal) {
+					*costs = s.way_count_straight; // next prefer existing canal
+				}
+				else {
+					*costs = s.way_count_leaving_way; // new canal very expensive
+				}
 				if(to->get_weg_hang()!=0  &&  !to_flat) {
 					*costs += s.way_count_slope * 2;
 				}
@@ -1213,8 +1276,9 @@ way_builder_t::way_builder_t(player_t* player)
 	, keep_existing_faster_ways(false)
 	, keep_existing_city_roads(false)
 	, build_sidewalk(false)
-	, maximum(2000)  // CA $ PER TILE
+	, prefer_parallel(false)
 {
+	maximum = welt->get_settings().way_count_maximum; // building cost, (curves etc.)
 }
 
 
@@ -1490,7 +1554,7 @@ DBG_DEBUG("insert to close","(%i,%i,%i)  f=%i",gr->get_pos().x,gr->get_pos().y,g
 				if (tmp->parent->gr->hat_weg(wt) && !gr->hat_weg(wt) && to->hat_weg(wt)) {
 					// but only if not straight track
 					if(!ribi_t::is_straight(tmp->dir)) {
-						new_g += s.way_count_leaving_road;
+						new_g += s.way_count_leaving_way;
 					}
 				}
 			}
@@ -1578,6 +1642,7 @@ DBG_DEBUG("way_builder_t::intern_calc_route()","steps=%i  (max %i) in route, ope
 		return cost;
 	}
 }
+
 
 
 void way_builder_t::intern_calc_straight_route(const koord3d start, const koord3d ziel)
@@ -2000,7 +2065,7 @@ DBG_DEBUG("insert to close","(%i,%i,%i)  f=%i",gr->get_pos().x,gr->get_pos().y,g
 				if (tmp->parent->gr->hat_weg(wt) && !(gr? gr: gu)->hat_weg(wt) && to->hat_weg(wt)) {
 					// but only if not straight track
 					if(!ribi_t::is_straight(tmp->dir)) {
-						new_g += s.way_count_leaving_road;
+						new_g += s.way_count_leaving_way;
 					}
 				}
 			}
@@ -2634,14 +2699,15 @@ void way_builder_t::build_road()
 		if(extend) {
 			weg_t * weg = gr->get_weg(road_wt);
 
-			// keep faster ways or if it is the same way
+			// keep faster ways or if it is the same way, or it is the way under the halt of an existing player
 			if(weg->get_desc()==desc  ||  keep_existing_ways
 				||  (keep_existing_city_roads  &&  weg->hat_gehweg())
 				||  (keep_existing_faster_ways  &&  weg->get_desc()->get_topspeed()>desc->get_topspeed())
 				||  (player_builder!=NULL  &&  weg->get_removal_error(player_builder)!=NULL)
 				||  (gr->get_typ()==grund_t::monorailboden && (bautyp&elevated_flag)==0)
 				||  (gr->has_two_ways()  &&  gr->get_weg_nr(1)->get_removal_error(player_builder)!=NULL) // do not replace public roads crossing rails of other players
-			) {
+				||  (gr->get_halt().is_bound()  && !check_owner(gr->get_halt()->get_owner(), player_builder))
+				) {
 				//nothing to be done
 			}
 			else {

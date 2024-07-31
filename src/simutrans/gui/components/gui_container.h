@@ -53,6 +53,10 @@ public:
 	*/
 	virtual void remove_component(gui_component_t *comp);
 
+	gui_component_t* get_component(size_t i) const { return components[i]; }
+
+	uint32 get_component_count() const { return components.get_count(); }
+
 	bool infowin_event(event_t const*) OVERRIDE;
 
 	/**

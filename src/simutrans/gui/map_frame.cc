@@ -43,95 +43,6 @@ bool  map_frame_t::zoomed = true;
 scr_coord map_frame_t::screenpos;
 
 
-gui_scrollpane_map_t::gui_scrollpane_map_t(gui_component_t* comp) : gui_scrollpane_t(comp)
-{
-	set_allow_dragging(false);
-	is_dragging = false;
-	is_cursor_hidden = false;
-}
-
-
-void gui_scrollpane_map_t::zoom(bool magnify)
-{
-	if (minimap_t::get_instance()->change_zoom_factor(magnify)) {
-		map_frame_t::zoomed = true;
-
-		// recalculate scroll bar width
-		set_size(get_size());
-		// invalidate old offsets
-		old_ij = koord::invalid;
-	}
-}
-
-
-bool gui_scrollpane_map_t::infowin_event(event_t const* ev)
-{
-	if (IS_WHEELUP(ev) || IS_WHEELDOWN(ev)) {
-		// otherwise these would go to the vertical scroll bars
-		zoom(IS_WHEELUP(ev));
-		return true;
-	}
-
-	// hack: minimap can resize upon right click
-	// we track this here, and adjust size.
-	if (IS_RIGHTCLICK(ev)) {
-		is_dragging = false;
-		display_show_pointer(false);
-		is_cursor_hidden = true;
-		return true;
-	}
-	else if (IS_RIGHTRELEASE(ev)) {
-		is_dragging = false;
-		display_show_pointer(true);
-		is_cursor_hidden = false;
-		return true;
-	}
-	else if (IS_RIGHTDRAG(ev)) {
-		int x = get_scroll_x();
-		int y = get_scroll_y();
-		const int scroll_direction = (env_t::scroll_multi > 0 ? 1 : -1);
-
-		x += (ev->mouse_pos.x - ev->click_pos.x) * scroll_direction * 2;
-		y += (ev->mouse_pos.y - ev->click_pos.y) * scroll_direction * 2;
-
-		is_dragging = true;
-
-		set_scroll_position(max(0, x), max(0, y));
-#if 0
-		// Move the mouse pointer back to starting location
-		// To prevent a infinite mouse event loop, we just do it when needed.
-		if ((ev->mx - ev->cx) != 0 || (ev->my - ev->cy) != 0) {
-			move_pointer(map_frame_t::screenpos.x + ev->cx, map_frame_t::screenpos.y + ev->cy);
-		}
-#endif
-		return true;
-	}
-	else if (IS_RIGHTDBLCLK(ev)) {
-		// zoom to fit window
-		do { // first, zoom all the way in
-			map_frame_t::zoomed = false;
-			zoom(true);
-		} while (map_frame_t::zoomed);
-
-		// then zoom back out to fit
-		const scr_size s_size = get_size() - D_SCROLLBAR_SIZE;
-		scr_size size = minimap_t::get_instance()->get_size();
-		map_frame_t::zoomed = true;
-		while (map_frame_t::zoomed && max(size.w / s_size.w, size.h / s_size.h)) {
-			zoom(false);
-			size = minimap_t::get_instance()->get_size();
-		}
-		return true;
-	}
-	else if (is_cursor_hidden) {
-		display_show_pointer(true);
-		is_cursor_hidden = false;
-	}
-
-	return gui_scrollpane_t::infowin_event(ev);
-}
-
-
 /**
  * Entries in factory legend: show color indicator + name
  */
@@ -219,40 +130,55 @@ map_button_t button_init[MAP_MAX_BUTTONS] = {
 	{ COL_WHITE,        COL_GREY5,       "Ownership", "Show the owenership of infrastructure", minimap_t::MAP_OWNER }
 };
 
-#define scrolly (*p_scrolly)
+
+// tiny helper function
+bool map_frame_t::zoom(bool magnify)
+{
+	if (minimap_t::get_instance()->change_zoom_factor(magnify)) {
+		map_frame_t::zoomed = true;
+		// recalculate scroll bar width
+		scrolly.set_size(scrolly.get_size());
+		// invalidate old offsets
+		old_ij = koord::invalid;
+		return true;
+	}
+	return false;
+}
+
 
 map_frame_t::map_frame_t() :
-	gui_frame_t( translator::translate("Reliefkarte") )
+	gui_frame_t( translator::translate("Reliefkarte") ),
+	karte(minimap_t::get_instance()),
+	scrolly(karte)
 {
 	// init statics
 	old_ij = koord::invalid;
 	zoomed = false;
 
-	// init map
-	minimap_t *karte = minimap_t::get_instance();
 	karte->init();
 	karte->set_display_mode( ( minimap_t::MAP_DISPLAY_MODE)env_t::default_mapmode );
+
 	// show all players by default
 	karte->player_showed_on_map = -1;
 
-	p_scrolly = new gui_scrollpane_map_t( minimap_t::get_instance());
-	p_scrolly->set_maximize( true );
-	p_scrolly->set_min_width( D_DEFAULT_WIDTH-D_MARGIN_LEFT-D_MARGIN_RIGHT );
-	// initialize scrollbar positions -- LATER
-	const scr_size size = karte->get_size();
-	const scr_size s_size=scrolly.get_size();
-	const koord ij = welt->get_viewport()->get_world_position();
-	const scr_size win_size = size-s_size; // this is the visible area
+	// init map
+	scrolly.set_maximize(true);
+	scrolly.set_min_width(D_DEFAULT_WIDTH - D_MARGIN_LEFT - D_MARGIN_RIGHT);
 
+
+	// map the current position visible
+	const koord ij = welt->get_viewport()->get_world_position();
+	const scr_size size = karte->get_size();
+	const scr_size s_size = scrolly.get_size();
+	const scr_size win_size = size - s_size; // this is the visible area
 	scrolly.set_scroll_position( clamp(ij.x-win_size.w/2, 0, size.w), clamp(ij.y-win_size.h/2, 0, size.h) );
 	scrolly.set_focusable( true );
 	scrolly.set_scrollbar_mode(scrollbar_t::show_always);
 
-
 	set_table_layout(1,0);
 
 	// first row of controls
-	add_table(4,1);
+	add_table(D_BUTTONS_PER_ROW,0);
 	{
 		// first row of controls
 		b_show_network_option.init(button_t::roundbox_state, "Show networks");
@@ -283,28 +209,61 @@ map_frame_t::map_frame_t() :
 
 
 	// second row of controls
-	zoom_row = add_table(7,0);
+	if (D_BUTTONS_PER_ROW >= 4) {
+		zoom_row = add_table(0, 1);
+		{
+			// zoom levels label
+			new_component<gui_label_t>("map zoom");
+
+			// zoom levels arrow left
+			zoom_buttons[0].init(button_t::repeatarrowleft, NULL);
+			zoom_buttons[0].add_listener(this);
+			add_component(zoom_buttons + 0);
+
+			// zoom level value label
+			sint16 zoom_in, zoom_out;
+			minimap_t::get_instance()->get_zoom_factors(zoom_out, zoom_in);
+			zoom_value_label.buf().printf("%i:%i", zoom_in, zoom_out);
+			zoom_value_label.update();
+			add_component(&zoom_value_label);
+
+			// zoom levels arrow right
+			zoom_buttons[1].init(button_t::repeatarrowright, NULL);
+			zoom_buttons[1].add_listener(this);
+			add_component(zoom_buttons + 1);
+
+		}
+	}
+	else {
+		// narrow screen
+		zoom_row = add_table(0, 1);
+		{
+			// zoom levels label
+			new_component<gui_label_t>("map zoom");
+
+			// zoom levels arrow left
+			zoom_buttons[0].init(button_t::repeatarrowleft, NULL);
+			zoom_buttons[0].add_listener(this);
+			add_component(zoom_buttons + 0);
+
+			// zoom level value label
+			sint16 zoom_in, zoom_out;
+			minimap_t::get_instance()->get_zoom_factors(zoom_out, zoom_in);
+			zoom_value_label.buf().printf("%i:%i", zoom_in, zoom_out);
+			zoom_value_label.update();
+			add_component(&zoom_value_label);
+
+			// zoom levels arrow right
+			zoom_buttons[1].init(button_t::repeatarrowright, NULL);
+			zoom_buttons[1].add_listener(this);
+			add_component(zoom_buttons + 1);
+
+			new_component<gui_fill_t>();
+		}
+		end_table();
+		add_table(0,1);
+	}
 	{
-		// zoom levels label
-		new_component<gui_label_t>("map zoom");
-
-		// zoom levels arrow left
-		zoom_buttons[0].init(button_t::repeatarrowleft, NULL);
-		zoom_buttons[0].add_listener( this );
-		add_component( zoom_buttons+0 );
-
-		// zoom level value label
-		sint16 zoom_in, zoom_out;
-		minimap_t::get_instance()->get_zoom_factors(zoom_out, zoom_in);
-		zoom_value_label.buf().printf("%i:%i", zoom_in, zoom_out );
-		zoom_value_label.update();
-		add_component( &zoom_value_label );
-
-		// zoom levels arrow right
-		zoom_buttons[1].init(button_t::repeatarrowright, NULL);
-		zoom_buttons[1].add_listener( this );
-		add_component( zoom_buttons+1 );
-
 		// rotate map 45 degrees (isometric view)
 		b_rotate45.init( button_t::square_state, "isometric map");
 		b_rotate45.set_tooltip("Similar view as the main window");
@@ -336,7 +295,13 @@ map_frame_t::map_frame_t() :
 	network_filter_container.set_visible(false);
 	add_component(&network_filter_container);
 
-	network_filter_container.set_table_layout(5,1);
+	if (D_BUTTONS_PER_ROW == 4) {
+		network_filter_container.set_table_layout(0, 1);
+	}
+	else {
+		network_filter_container.set_table_layout(1, 0);
+	}
+	network_filter_container.add_table(0, 1);
 	// insert selections: show networks, in filter container
 	b_overlay_networks.init(button_t::square_state, "Networks");
 	b_overlay_networks.set_tooltip("Overlay schedules/network");
@@ -357,8 +322,10 @@ map_frame_t::map_frame_t() :
 	viewed_player_c.set_focusable( true );
 	viewed_player_c.add_listener( this );
 	network_filter_container.add_component(&viewed_player_c);
+	network_filter_container.end_table();
 
 	// freight combo for network overlay
+	network_filter_container.add_table(0, 1);
 	{
 		viewable_freight_types.append(NULL);
 		freight_type_c.new_component<gui_scrolled_list_t::const_text_scrollitem_t>( translator::translate("All"), SYSCOL_TEXT) ;
@@ -408,13 +375,16 @@ map_frame_t::map_frame_t() :
 	b_overlay_networks_load_factor.pressed = 0;
 	minimap_t::get_instance()->show_network_load_factor = 0;
 	network_filter_container.add_component( &b_overlay_networks_load_factor );
+	network_filter_container.end_table();
 
 	// filter container
 	filter_container.set_visible(false);
 	add_component(&filter_container);
 	filter_container.set_table_layout(1, 0);
 
-	filter_container.add_table(5,0)->set_force_equal_columns(true);
+	int w = network_filter_container.get_min_size().w;
+	const int FILTER_BUTTONS_PER_ROW = max(3, min(5, max(display_get_width(),w) / (D_BUTTON_WIDTH + D_H_SPACE + D_MARGIN_LEFT)));
+	filter_container.add_table(FILTER_BUTTONS_PER_ROW,0)->set_force_equal_columns(true);
 	// insert filter buttons in legend container
 	for (int index=0; index<MAP_MAX_BUTTONS; index++) {
 		filter_buttons[index].init( button_t::box_state | button_t::flexible, button_init[index].button_text);
@@ -427,7 +397,7 @@ map_frame_t::map_frame_t() :
 	update_buttons();
 
 	// directory container
-	directory_container.set_table_layout(4,0);
+	directory_container.set_table_layout(D_BUTTONS_PER_ROW,0);
 	directory_container.set_visible(false);
 	add_component(&directory_container);
 
@@ -435,7 +405,7 @@ map_frame_t::map_frame_t() :
 	b_filter_factory_list.init(button_t::square_state, "Show only used");
 	b_filter_factory_list.set_tooltip("In the industry legend show only currently existing factories");
 	b_filter_factory_list.add_listener(this);
-	directory_container.add_component( &b_filter_factory_list, 4 );
+	directory_container.add_component( &b_filter_factory_list, D_BUTTONS_PER_ROW);
 	update_factory_legend();
 
 	// scale container
@@ -449,7 +419,7 @@ map_frame_t::map_frame_t() :
 	// map scrolly
 	scrolly.set_show_scroll_x(true);
 	scrolly.set_scroll_discrete_y(false);
-	take_component(p_scrolly);
+	add_component(&scrolly);
 
 	// restore window size and options
 	show_hide_legend( legend_visible );
@@ -591,13 +561,9 @@ bool map_frame_t::action_triggered( gui_action_creator_t *comp, value_t v )
 		filter_factory_list = !filter_factory_list;
 		show_hide_directory( b_show_directory.pressed );
 	}
-	else if(  comp == zoom_buttons+1  ) {
-		// zoom out
-		p_scrolly->zoom(true);
-	}
-	else if(  comp == zoom_buttons+0  ) {
-		// zoom in
-		p_scrolly->zoom(false);
+	else if (comp == zoom_buttons+0  ||  comp == zoom_buttons+1) {
+		// zoom in/out
+		zoomed |= zoom(comp != zoom_buttons);
 	}
 	else if(  comp == &b_rotate45  ) {
 		// rotated/straight map
@@ -681,7 +647,33 @@ bool map_frame_t::infowin_event(const event_t *ev)
 		}
 	}
 
-	return gui_frame_t::infowin_event(ev);
+	// center map with rightdobuleclick
+	if (IS_RIGHTDBLCLK(ev)) {
+		// zoom minimap to fit window
+		while (karte->change_zoom_factor(true))
+			{}
+		if (scrolly.get_client().w < karte->get_size().w  ||  scrolly.get_client().h < karte->get_size().h) {
+			// zoom out until no longer fits
+			while (karte->change_zoom_factor(false)  &&  (scrolly.get_client().w < karte->get_size().w  ||  scrolly.get_client().h < karte->get_size().h))
+				{}
+		}
+		map_frame_t::zoomed = true;
+		scrolly.set_size(scrolly.get_size());
+		// invalidate old offsets
+		old_ij = koord::invalid;
+		return true;
+	}
+
+	scr_size karte_sz = karte->get_size();
+	bool swallowed = gui_frame_t::infowin_event(ev);
+
+	if (karte_sz != karte->get_size()) {
+		// minimap was zoomed
+		map_frame_t::zoomed = true;
+		scrolly.set_size(scrolly.get_size());
+		old_ij = koord::invalid;
+	}
+	return swallowed;
 }
 
 
