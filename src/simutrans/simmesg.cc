@@ -399,20 +399,13 @@ void chat_message_t::add_chat_message(const char* text, sint8 channel, sint8 sen
 	if (channel >= -1) {
 		if (sender_nr >= 0  &&  sender_nr != PLAYER_UNOWNED) {
 			if (player != world()->get_active_player()) {
-				uint16 tab = 0;
 				// so it is not a message sent from us
 				bool show_message = channel == -1; // message for all?
-				if(!show_message) {
-					tab = 1;
-				}
 				show_message |= channel == world()->get_active_player_nr(); // company message for us?
-				if(!show_message) {
-					tab = 2;
-				}
 				show_message |= recipient && strcmp(recipient, env_t::nickname.c_str()) == 0; // private chat for us?
 				if(show_message) {
 					buf.printf("%s: %s", sender_.c_str(), text);
-					ticker::add_chat_msg(buf, koord3d::invalid, PLAYER_FLAG|sender_nr, tab, message_t::chat);
+					ticker::add_msg(buf, koord3d::invalid, PLAYER_FLAG|sender_nr);
 					env_t::chat_unread_public++;
 					sound_play(sound_desc_t::message_sound, 255, TOOL_SOUND);
 				}

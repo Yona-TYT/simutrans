@@ -15,8 +15,6 @@
 #include "simmesg.h"
 #include "display/viewport.h"
 
-#include "gui/chat_frame.h"
-
 #define X_DIST    (2)   // how much scrolling per update call?
 #define X_SPACING (18)  // spacing between messages, in pixels
 
@@ -119,21 +117,6 @@ void ticker::add_msg(const char* txt, koord3d pos, FLAGGED_PIXVAL color)
 	add_msg_node(n);
 }
 
-void ticker::add_chat_msg(const char* txt, koord3d pos, FLAGGED_PIXVAL color, uint16 tab, sint32 type)
-{
-	node n;
-	tstrncpy(n.msg, txt, lengthof(n.msg));
-	n.pos = pos;
-	n.color = color;
-	// set to default values
-	n.type  = type;
-	n.time  = 0;
-	n.image = IMG_EMPTY;
-	n.tab = tab;
-
-	add_msg_node(n);
-}
-
 
 void ticker::update()
 {
@@ -230,19 +213,6 @@ void ticker::process_click(int x)
 	if (list.empty()) {
 		return;
 	}
-	for(node & n : list) {
-		dbg->warning("TAB","--------- TAB %d -- TYPE %d", n.tab, n.type);
-		if(n.type == message_t::chat) {
-			// pop up for the win
-			chat_frame_t *si = (chat_frame_t*)win_get_magic(magic_chatframe);
-			if (si == NULL) {
-				si = new chat_frame_t();
-				create_win({ 0, 200 }, si, w_info, magic_chatframe);
-			}
-			si->open_tab(n.tab);
-			break;
-		}
-	}
 	clicked = &list.front();
 	if (list.get_count() > 1) {
 		for(node & n : list) {
@@ -260,4 +230,5 @@ void ticker::process_click(int x)
 	else {
 		clicked->open_msg_window(false);
 	}
+
 }
