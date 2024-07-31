@@ -31,6 +31,13 @@ namespace ticker
 	void add_msg(const char*, koord3d pos, FLAGGED_PIXVAL color);
 
 	/**
+	 * Add a message to the message list
+	 * @param pos    position of the event
+	 * @param color  message color
+	 */
+	void add_chat_msg(const char*, koord3d pos, FLAGGED_PIXVAL color, uint16 tab, sint32 type);
+
+	/**
 	 * Add a message in message_node_t format
 	 */
 	void add_msg_node(const message_node_t& msg);

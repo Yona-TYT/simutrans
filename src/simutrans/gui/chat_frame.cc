@@ -570,6 +570,14 @@ void chat_frame_t::rdwr(loadsave_t* file)
 }
 
 
+void chat_frame_t::open_tab(uint16 tab)
+{
+	tabs.set_active_tab_index(tab);
+	resize(scr_coord(0,0));
+	set_dirty();
+}
+
+
 void chat_frame_t::activate_whisper_to(const char* recipient)
 {
 	selected_destination = recipient;

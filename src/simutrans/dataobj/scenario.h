@@ -408,7 +408,7 @@ public:
 	 * Called for instance in karte_t::local_set_tool to change active tool or when filling toolbars.
 	 * @return true if player can use this tool.
 	 */
-	bool is_tool_allowed(const player_t* player, uint16 tool_id, sint16 wt = invalid_wt, sint16 st = type_all);
+	bool is_tool_allowed(const player_t* player, uint16 tool_id, sint16 wt = invalid_wt);
 
 	/**
 	 * Checks if player can use the tool at this position.

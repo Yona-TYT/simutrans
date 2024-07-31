@@ -413,7 +413,7 @@ void scenario_t::clear_rules()
 }
 
 
-bool scenario_t::is_tool_allowed(const player_t* player, uint16 tool_id, sint16 wt, sint16 st)
+bool scenario_t::is_tool_allowed(const player_t* player, uint16 tool_id, sint16 wt)
 {
 	if (what_scenario != SCRIPTED  &&  what_scenario != SCRIPTED_NETWORK) {
 		return true;
@@ -443,7 +443,7 @@ bool scenario_t::is_tool_allowed(const player_t* player, uint16 tool_id, sint16 
 	// then call script if available
 	if (what_scenario == SCRIPTED) {
 		bool ok = true;
-		const char* err = script->call_function(script_vm_t::FORCE, "is_tool_allowed", ok, (uint8)(player  ?  player->get_player_nr() : PLAYER_UNOWNED), tool_id, wt, st);
+		const char* err = script->call_function(script_vm_t::FORCE, "is_tool_allowed", ok, (uint8)(player  ?  player->get_player_nr() : PLAYER_UNOWNED), tool_id, wt);
 		return err != NULL  ||  ok;
 	}
 
