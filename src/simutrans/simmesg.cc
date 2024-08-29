@@ -401,12 +401,14 @@ void chat_message_t::add_chat_message(const char* text, sint8 channel, sint8 sen
 			bool company = channel == world()->get_active_player_nr();
 			if (player != world()->get_active_player()  ||  company) {
 				// so it is not a message sent from us
-				bool show_message = channel == -1; // message for all?
-				show_message |= company; // company message for us?
-				show_message |= recipient  &&  strcmp(recipient, env_t::nickname.c_str()) == 0; // private chat for us?
-				if(show_message) {
+				int show_message = -1;
+				show_message += channel == -1; // message for all?
+				show_message = (company ? 1 : show_message); // company message for us?
+				show_message += recipient  &&  strcmp(recipient, env_t::nickname.c_str()) == 0; // private chat for us?
+				show_message += show_message == 1 && !company; // Increase so that the private message tab is correct
+				if(show_message != -1) {
 					buf.printf("%s: %s", sender_.c_str(), text);
-					ticker::add_msg(buf, koord3d::invalid, PLAYER_FLAG|sender_nr);
+					ticker::add_chat_msg(buf, koord3d::invalid, PLAYER_FLAG|sender_nr, show_message, message_t::chat);
 					env_t::chat_unread_public++;
 					sound_play(sound_desc_t::message_sound, 255, TOOL_SOUND);
 				}

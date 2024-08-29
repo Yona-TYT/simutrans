@@ -76,6 +76,8 @@ public:
 
 	// theoretically, map roatation should not happen with netwrok games ...
 	void map_rotate90(sint16 /*new_ysize*/) OVERRIDE { fill_list(); }
+
+	void open_tab(uint16 tab);
 };
 
 #endif

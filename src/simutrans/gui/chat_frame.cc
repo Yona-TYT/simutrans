@@ -577,3 +577,11 @@ void chat_frame_t::activate_whisper_to(const char* recipient)
 	last_count = 0xFFFFFFFFul; // update upside of infowin_event!
 	reactivate_input = true;
 }
+
+
+void chat_frame_t::open_tab(uint16 tab)
+{
+	tabs.set_active_tab_index(tab);
+	resize(scr_coord(0,0));
+	set_dirty();
+}

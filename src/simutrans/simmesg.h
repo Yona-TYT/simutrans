@@ -38,6 +38,8 @@ struct message_node_t
 	PIXVAL get_player_color(karte_t*) const;
 
 	void open_msg_window(bool open_as_autoclose) const;
+
+	sint16 tab;
 };
 
 class message_t
