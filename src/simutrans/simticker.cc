@@ -236,6 +236,7 @@ void ticker::process_click(int x)
 	else if (clicked->pos != koord3d::invalid) {
 		if(welt->is_within_limits(clicked->pos.get_2d())) {
 			welt->get_viewport()->change_world_position(clicked->pos);
+			welt->get_zeiger()->change_pos( pos );
 		}
 	}
 	else {
