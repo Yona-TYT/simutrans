@@ -455,6 +455,13 @@ public:
 	 */
 	const char* jump_to_link_executed(koord3d pos);
 
+	/**
+	 * Called when the player changes the language.
+	 *
+	 * @return an error message otherwise or null
+	 */
+	const char* is_language_changing();
+
 	/// @return debug dump of forbidden tools
 	const char* get_forbidden_text();
 	/// @}

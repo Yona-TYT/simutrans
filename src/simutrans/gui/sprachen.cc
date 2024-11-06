@@ -21,6 +21,7 @@
 
 #include "../dataobj/environment.h"
 #include "../dataobj/translator.h"
+#include "../dataobj/scenario.h"
 #include "../sys/simsys.h"
 #include "../utils/simstring.h"
 #include "../world/simworld.h"
@@ -189,6 +190,13 @@ bool sprachengui_t::action_triggered( gui_action_creator_t *comp, value_t)
 				// must not update non-existent toolbars
 				tool_t::update_toolbars();
 			}
+
+			scenario_t *scen = welt->get_scenario();
+			if (scen->is_scripted()) {
+				scen->is_language_changing();
+
+			}
+
 		}
 		else {
 			b->pressed = false;

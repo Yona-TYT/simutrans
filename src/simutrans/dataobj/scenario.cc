@@ -595,6 +595,24 @@ const char* scenario_t::jump_to_link_executed(koord3d pos)
 	return NULL;
 }
 
+
+const char* scenario_t::is_language_changing()
+{
+	if (env_t::server) {
+		// networkgame: allowed
+		return NULL;
+	}
+	// call script
+	if (what_scenario == SCRIPTED) {
+		static plainstring msg;
+		const char *err = script->call_function(script_vm_t::FORCE, "is_language_changing", msg);
+
+		return err == NULL ? msg.c_str() : NULL;
+	}
+	return NULL;
+}
+
+
 const char* scenario_t::get_error_text()
 {
 	if (script) {

@@ -290,6 +290,15 @@ register_function("is_convoy_allowed");
 register_function("jump_to_link_executed");
 
 /**
+ * Called when the player changes the language.
+ *
+ * @return null if allowed, an error message otherwise
+ * @ingroup scen_skel
+ * @ingroup quick_return_func
+ */
+register_function("is_language_changing");
+
+/**
  * Initializes the tool.
  * @returns true upon success.
  *
