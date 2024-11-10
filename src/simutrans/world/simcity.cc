@@ -624,6 +624,14 @@ void stadt_t::update_gebaeude_from_stadt(gebaeude_t* gb)
 	buildings.append(gb, gb->get_tile()->get_desc()->get_level() + 1);
 }
 
+// get buildings list for script API
+void stadt_t::get_builds_list( vector_tpl<gebaeude_t*> &build_list ) const
+{
+	build_list.clear();
+	for(gebaeude_t* const i : buildings) {
+		build_list.append( i );
+	}
+}
 
 void stadt_t::pruefe_grenzen(koord /*k*/, koord /*size*/)
 {

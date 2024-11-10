@@ -423,6 +423,10 @@ public:
 	// (called when removed by player, or by town)
 	void remove_gebaeude_from_stadt(gebaeude_t *gb);
 
+	// get buildings list for script API
+	// It is only called from a script
+	void get_builds_list( vector_tpl<gebaeude_t*> &fields_list ) const;
+
 	/**
 	 * This function adds houses to the city house list.
 	 * @param ordered true for multithreaded loading, will insert buidings ordered, will not update city limits
@@ -513,6 +517,7 @@ public:
 	void step(uint32 delta_t);
 
 	void new_month( bool recalc_destinations );
+
 
 private:
 	/**
