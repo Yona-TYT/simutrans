@@ -225,6 +225,8 @@ public:
 	/// cursor marks this area
 	koord cursor_area;
 
+	/// systemtype for build way
+	uint8 systemtype = type_all;
 	
 	/// cursor offset within marked area (only effective if cursor_centered != false)
 	koord cursor_offset;

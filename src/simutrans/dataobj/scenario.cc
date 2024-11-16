@@ -500,20 +500,23 @@ const char* scenario_t::is_work_allowed_here(const player_t* player, uint16 tool
 		bool is_ctrl = false;
 		bool is_shift = false;
 		uint8 player_nr = player ? player->get_player_nr() : PLAYER_UNOWNED;
+
+		tool_t *my_tool = welt->get_tool(player_nr);
+
 		if(player_nr != PLAYER_UNOWNED){
-			if (two_click_tool_t *two_tool = dynamic_cast<two_click_tool_t*>(welt->get_tool(player_nr))) {
+			if (two_click_tool_t *two_tool = dynamic_cast<two_click_tool_t*>(my_tool)) {
 				start_pos = two_tool->get_start_pos();
 				is_drag_tool = !two_tool->is_first_click();
 				is_ctrl = two_tool->is_ctrl_pressed();
 				is_shift = two_tool->is_shift_pressed();
 			}
-			else if (tool_t *tool = dynamic_cast<tool_t*>(welt->get_tool(player_nr))) {
+			else if (tool_t *tool = dynamic_cast<tool_t*>(my_tool)) {
 				is_ctrl = tool->is_ctrl_pressed();
 				is_shift = tool->is_shift_pressed();
 			}
 		}
 		static plainstring msg;
-		const char *err = script->call_function(script_vm_t::FORCE, "is_work_allowed_here", msg, player_nr, tool_id, pos, script_api::mytool_data_t(start_pos, is_drag_tool, is_ctrl, is_shift));
+		const char *err = script->call_function(script_vm_t::FORCE, "is_work_allowed_here", msg, player_nr, tool_id, pos, script_api::mytool_data_t(start_pos, is_drag_tool, is_ctrl, is_shift, my_tool->systemtype));
 
 		return err == NULL ? msg.c_str() : NULL;
 	}

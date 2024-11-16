@@ -65,9 +65,10 @@ namespace script_api {
 		bool is_drag_tool;
 		bool is_ctrl;
 		bool is_shift;
+		uint8 systemtype;
 
-		mytool_data_t(koord3d pos, bool drag, bool ctrl, bool shift) :
-			start_pos(pos), is_drag_tool(drag), is_ctrl(ctrl), is_shift(shift)
+		mytool_data_t(koord3d pos, bool drag, bool ctrl, bool shift, uint8 st) :
+			start_pos(pos), is_drag_tool(drag), is_ctrl(ctrl), is_shift(shift), systemtype(st)
 		{}
 	};
 
