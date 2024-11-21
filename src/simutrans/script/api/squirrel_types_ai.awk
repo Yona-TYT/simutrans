@@ -31,7 +31,6 @@ BEGIN {
 	export_types_ai["city_x::get_pos_se"] = "coord()"
 	export_types_ai["city_x::change_size"] = "string(integer)"
 	export_types_ai["city_x::set_citygrowth_enabled"] = "void(bool)"
-	export_types_ai["city_x::get_builds_list"] = "array<building_x>()"
 	export_types_ai["::get_ops_total"] = "integer()"
 	export_types_ai["::get_ops_remaining"] = "integer()"
 	export_types_ai["debug::pause"] = "bool()"

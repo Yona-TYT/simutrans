@@ -36,6 +36,7 @@ vector_tpl<sint64> const& get_city_stat(stadt_t* city, bool monthly, sint32 INDE
 	return v;
 }
 
+
 SQInteger world_get_next_city(HSQUIRRELVM vm)
 {
 	return generic_get_next(vm, welt->get_cities().get_count());
@@ -76,12 +77,6 @@ call_tool_work city_change_size(stadt_t *city, sint32 delta)
 	}
 }
 
-vector_tpl<gebaeude_t*> const& city_get_builds_list(stadt_t *city)
-{
-	static vector_tpl<gebaeude_t*> list;
-	city->get_builds_list(list);
-	return list;
-}
 
 void export_city(HSQUIRRELVM vm)
 {
@@ -260,12 +255,6 @@ void export_city(HSQUIRRELVM vm)
 	 * @ingroup game_cmd
 	 */
 	register_method(vm, &set_citygrowth, "set_citygrowth_enabled", true);
-
-	/**
-	 * Get list of all buildings in this city.
-	 * @returns array of building_x objects
-	 */
-	register_method(vm, &city_get_builds_list, "get_builds_list", true);
 
 	end_class(vm);
 }

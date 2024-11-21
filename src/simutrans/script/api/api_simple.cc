@@ -74,7 +74,6 @@ SQInteger param<mytool_data_t>::push(HSQUIRRELVM vm, mytool_data_t const& v)
 	create_slot<bool>(vm, "is_drag_tool",	v.is_drag_tool);
 	create_slot<bool>(vm, "is_ctrl",		v.is_ctrl);
 	create_slot<bool>(vm, "is_shift",		v.is_shift);
-	create_slot<uint8>(vm, "systemtype",	v.systemtype);
 	return 1;
 }
 
