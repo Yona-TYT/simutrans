@@ -107,7 +107,7 @@ void bridge_builder_t::fill_menu(tool_selector_t *tool_selector, const waytype_t
 	if (!welt->get_scenario()->is_tool_allowed(welt->get_active_player(), TOOL_BUILD_BRIDGE | GENERAL_TOOL, wtyp)) {
 		return;
 	}
-	bool enable = welt->get_scenario()->is_tool_enabled(welt->get_active_player(), TOOL_BUILD_BRIDGE | GENERAL_TOOL, wtyp, 0);
+	bool enable = welt->get_scenario()->is_tool_enabled(welt->get_active_player(), TOOL_BUILD_BRIDGE | GENERAL_TOOL, wtyp);
 
 	const uint16 time = welt->get_timeline_year_month();
 	vector_tpl<const bridge_desc_t*> matching(desc_table.get_count());
@@ -116,15 +116,13 @@ void bridge_builder_t::fill_menu(tool_selector_t *tool_selector, const waytype_t
 	for(auto const& i : desc_table) {
 		bridge_desc_t const* const b = i.value;
 		if (  b->get_waytype()==wtyp  &&  b->is_available(time)  ) {
-			if (welt->get_scenario()->is_tool_allowed(welt->get_active_player(), TOOL_BUILD_BRIDGE | GENERAL_TOOL, wtyp,b->get_name())) {
-				matching.insert_ordered(b, compare_bridges);
-			}
+			matching.insert_ordered( b, compare_bridges);
 		}
 	}
 
 	// now sorted ...
 	for(bridge_desc_t const *i : matching) {
-		i->get_builder()->enabled = enable  &&  welt->get_scenario()->is_tool_enabled(welt->get_active_player(), TOOL_BUILD_BRIDGE | GENERAL_TOOL, wtyp, i->get_name());
+		i->get_builder()->enabled = enable;
 		tool_selector->add_tool_selector(i->get_builder());
 	}
 }
@@ -371,7 +369,7 @@ koord3d bridge_builder_t::find_end_pos(player_t *player, koord3d pos, const koor
 		pos = pos + zv;
 
 		// test scenario conditions
-		if(  (error_msg = scen->is_work_allowed_here(player, TOOL_BUILD_BRIDGE|GENERAL_TOOL, wegtyp, desc->get_name(), pos)) != NULL  ) {
+		if(  (error_msg = scen->is_work_allowed_here(player, TOOL_BUILD_BRIDGE|GENERAL_TOOL, wegtyp, pos)) != NULL  ) {
 			// fail silent?
 			return koord3d::invalid;
 		}
