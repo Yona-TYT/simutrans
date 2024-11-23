@@ -524,7 +524,7 @@ const char* scenario_t::is_work_allowed_here(const player_t* player, uint16 tool
 				// applies to us
 				if (f.parameter_hash == 0 || f.parameter_hash == p_hash) {
 					// parameter matches too => forbidden
-					return false;
+					return "";
 				}
 			}
 
