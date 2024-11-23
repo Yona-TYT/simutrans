@@ -41,7 +41,7 @@ foreach(tool_id in map.editing_tools) {
  * Called when filling toolbars, activating tools
  * Results are not transferred over network, use the rules.forbid_* functions in this case
  *
- * @param name is raw tool name (String)
+ * @param name is parameter (string) i.e. description for way tools
  * @return 1 if allowed, null otherwise
  */
 function is_tool_allowed(pl, tool_id, wt, name)
@@ -55,7 +55,7 @@ function is_tool_allowed(pl, tool_id, wt, name)
  * Error messages are sent back over network to clients.
  * Does not work with waybuilding etc use the rules.forbid_* functions in this case.
  *
- * @param name is raw tool name (String) 
+ * @param name is parameter (string) i.e. description for way tools
  * @param pos is a table with coordinate { x=, y=, z=}
  * @return null if allowed, an error message otherwise
  */
