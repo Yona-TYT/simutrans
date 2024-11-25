@@ -483,8 +483,6 @@ public:
 	 */
 	const char* jump_to_link_executed(koord3d pos);
 
-	void is_message_chat(sint8 chanel, const player_t* player, const char *sender_nick, const char *recipient, koord pos, const char *msg);
-
 	/// @return debug dump of forbidden tools
 	const char* get_forbidden_text();
 	/// @}
