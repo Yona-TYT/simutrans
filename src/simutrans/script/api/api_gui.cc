@@ -75,6 +75,25 @@ void open_info_win()
 	open_info_win_client("", PLAYER_UNOWNED);
 }
 
+static SQInteger add_chat_message(HSQUIRRELVM vm)
+{
+
+	const char* text = param<const char*>::get(vm, 2);
+	const sint8 sender_company_nr = param<sint8>::get(vm, 3);
+	const sint8 channel = param<sint8>::get(vm, 4);
+	const char* clientname = param<const char*>::get(vm, 5);
+	const char* destination = param<const char*>::get(vm, 6);
+	const koord pos = param<koord>::get(vm, 7);
+
+	dbg->warning("API messge","--------- Desc %s -- wt %x",text, pos);
+
+	// Send chat message to server for distribution
+	nwc_chat_t* nwchat = new nwc_chat_t(text, sender_company_nr, channel, clientname, destination, pos);
+	network_send_server(nwchat);
+
+	return SQ_OK;
+}
+
 void export_gui(HSQUIRRELVM vm, bool scenario)
 {
 	/**
@@ -127,6 +146,8 @@ void export_gui(HSQUIRRELVM vm, bool scenario)
 		* @ingroup scen_only
 		*/
 		STATIC register_method(vm, &add_scenario_message, "add_message");
+
+		STATIC register_function(vm, add_chat_message, "add_chat_message", 7, "..i i..t|x|y");
 	}
 	else {
 		/**
