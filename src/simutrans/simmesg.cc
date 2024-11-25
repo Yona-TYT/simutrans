@@ -17,7 +17,6 @@
 #include "dataobj/translator.h"
 #include "dataobj/environment.h"
 #include "dataobj/pakset_manager.h"
-#include "dataobj/scenario.h"
 #include "network/network_socket_list.h"
 #include "player/simplay.h"
 #include "utils/simstring.h"
@@ -414,7 +413,6 @@ void chat_message_t::add_chat_message(const char* text, sint8 channel, sint8 sen
 					sound_play(sound_desc_t::message_sound, 255, TOOL_SOUND);
 				}
 			}
-			welt->get_scenario()->is_message_chat(channel, player, sender_nick.c_str(), recipient.c_str(), pos, text);
 		}
 	}
 	else if (channel == -2) {
