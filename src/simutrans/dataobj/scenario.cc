@@ -19,6 +19,7 @@
 #include "../dataobj/environment.h"
 #include "../network/network.h"
 #include "../network/network_cmd_scenario.h"
+#include "../network/network_socket_list.h"
 #include "../dataobj/schedule.h"
 
 #include "../utils/cbuffer.h"
@@ -524,11 +525,7 @@ const char* scenario_t::is_work_allowed_here(const player_t* player, uint16 tool
 				// applies to us
 				if (f.parameter_hash == 0 || f.parameter_hash == p_hash) {
 					// parameter matches too => forbidden
-					const char* err = f.error.c_str();
-					if (err == NULL) {
-						err = "";
-					}
-					return err;
+					break;
 				}
 			}
 
@@ -665,6 +662,19 @@ const char* scenario_t::jump_to_link_executed(koord3d pos)
 	}
 	return NULL;
 }
+
+
+void scenario_t::is_message_chat(sint8 chanel, const player_t* player, const char *sender_nick, const char *recipient, koord pos, const char *msg)
+{
+	// call script
+	if (what_scenario == SCRIPTED) {
+		static plainstring str;
+		const player_t* curr_player = welt->get_active_player();
+		script->call_function(script_vm_t::FORCE, "is_message_chat", str, msg, player->get_player_nr(), chanel, sender_nick, recipient, pos, (uint8)(curr_player ? curr_player->get_player_nr() : PLAYER_UNOWNED));
+
+	}
+}
+
 
 const char* scenario_t::get_error_text()
 {
