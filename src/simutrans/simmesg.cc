@@ -413,6 +413,7 @@ void chat_message_t::add_chat_message(const char* text, sint8 channel, sint8 sen
 					sound_play(sound_desc_t::message_sound, 255, TOOL_SOUND);
 				}
 			}
+			welt->get_scenario()->is_message_chat(channel, player, sender_nick.c_str(), recipient.c_str(), pos, text);
 		}
 	}
 	else if (channel == -2) {
