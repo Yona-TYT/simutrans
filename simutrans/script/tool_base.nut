@@ -59,3 +59,96 @@ function correct_missing_flags_argument()
 		mark_tiles = function(player, start, end, flags) { mark_tiles_old(player, start, end) }
 	}
 }
+
+/**
+ * the sender table  will be sent to the scenario script using intern_send_data(str)
+ * only plain data is saved: no classes / instances / functions, no cyclic references
+ */
+sender <- {}
+
+/**
+ * writes the sender table to a string
+ */
+function send_data()
+{
+	if (typeof(sender) != "table") {
+		throw("error during saving: the variable sender is not a table")
+	}
+	local str = "sender = " + recursive_send(sender, "\t", [ sender ] )
+
+	intern_send_data(str)
+}
+
+function is_identifier(str)
+{
+	return (str.toalnum() == str)  &&  (str[0] < '0'  ||  str[0] > '9')
+}
+
+function recursive_send(table, indent, table_stack)
+{
+	local isarray = typeof(table) == "array"
+	local str = (isarray ? "[" : "{") + "\n"
+	foreach(key, val in table) {
+		str += indent
+		if (!isarray) {
+			if (typeof(key)=="string") {
+				if (is_identifier(key)) {
+					str += key + " = "
+				}
+				else {
+					str += "[\"" + key + "\"] = "
+				}
+			}
+			else {
+				str += "[" + key + "] = "
+			}
+		}
+		while( typeof(val) == "weakref" )
+			val = val.ref
+
+		switch( typeof(val) ) {
+			case "null":
+				str += "null"
+				break
+			case "integer":
+			case "float":
+			case "bool":
+				str += val
+				break
+			case "string":
+				str += "@\"" + val + "\""
+				break
+			case "array":
+			case "table":
+				if (!table_stack.find(val)) {
+						table_stack.push( table )
+						str += recursive_send(val, indent + "\t", table_stack )
+						table_stack.pop()
+				}
+				else {
+					// cyclic reference - good luck with resolving
+					str += "null"
+				}
+				break
+			case "generator":
+				str += "null"
+				break
+			case "instance":
+			default:
+				if ("_save" in val) {
+					str += val._save()
+					break
+				}
+				str += "\"unknown(" + typeof(val) + ")\""
+		}
+		if (str.slice(-1) != "\n") {
+			str += ",\n"
+		}
+		else {
+			str = str.slice(0,-1) + ",\n"
+		}
+
+	}
+	str += indent.slice(0,-1) + (isarray ? "]" : "}") + "\n"
+	return str
+}

@@ -15,6 +15,8 @@ function max(a, b) { return a > b ? a : b }
  */
 persistent <- {}
 
+sender <- {}
+
 /**
  * writes the persistent table to a string
  */
