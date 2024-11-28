@@ -32,6 +32,7 @@ struct scripted_tool_info_t {
 	plainstring title;       ///< name of tool (used for dialog)
 	plainstring tooltip;
 	plainstring menu_arg;    ///< menu name, where this tool should appear (used in menuconf.tab)
+	plainstring name_arg;    
 	const skin_desc_t* desc; ///< skin object used for cursor (0), icon (1), and maybe marker (2)
 	bool restart;            ///< true, if script vm has to be restarted after work()
 	bool is_one_click;       ///< true, if tool is one-click (otherwise needs two clicks/coordinates to work)
@@ -77,6 +78,11 @@ public:
 	void step(player_t* player);
 
 	const char *get_tooltip(const player_t *) const { return info ? info->tooltip.c_str() : ""; }
+
+	// returns default_param of this tool for player
+	// if player==NULL returns default_param that was used to create the tool
+	const char* get_default_param(const player_t *) const { return info ? info->name_arg.c_str() : ""; }
+
 	koord get_cursor_area() const { return info->cursor_area; }
 	koord get_cursor_offset() const { return info->cursor_offset; }
 };
@@ -97,6 +103,8 @@ public:
 	const char *work(player_t* player, koord3d pos) OVERRIDE;
 
 	const char *get_tooltip(const player_t *pl) const OVERRIDE { return exec_script_base_t::get_tooltip(pl); }
+
+	const char* get_default_param(player_t *pl) const OVERRIDE { return exec_script_base_t::get_default_param(pl); }
 };
 
 class tool_exec_two_click_script_t : public two_click_tool_t, public exec_script_base_t {
@@ -129,6 +137,8 @@ public:
 	virtual image_id get_marker_image() const OVERRIDE;
 
 	const char *get_tooltip(const player_t *pl) const OVERRIDE { return exec_script_base_t::get_tooltip(pl); }
+
+	const char* get_default_param(player_t *pl) const OVERRIDE { return exec_script_base_t::get_default_param(pl); }
 };
 
 #endif

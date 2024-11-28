@@ -48,6 +48,7 @@ const scripted_tool_info_t* script_tool_manager_t::get_script_info(const char* p
 		file.read( contents );
 		info->title    = translator::translate(contents.get_string("title", path));
 		info->menu_arg = contents.get_string("menu", "");
+		info->name_arg = contents.get_string("name", "");
 		info->tooltip  = translator::translate(contents.get_string("tooltip", ""));
 		info->cursor_area = contents.get_koord("cursor_area", koord(1,1));
 		info->cursor_offset = contents.get_koord("cursor_offset", koord(0,0));
