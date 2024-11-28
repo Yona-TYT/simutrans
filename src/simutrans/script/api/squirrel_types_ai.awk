@@ -295,6 +295,7 @@ BEGIN {
 	export_types_ai["player_x::get_current_maintenance"] = "integer()"
 	export_types_ai["player_x::create_line"] = "void(way_types)"
 	export_types_ai["player_x::get_type"] = "integer()"
+	export_types_ai["player_x::get_id"] = "integer()"
 	export_types_ai["schedule_entry_x::constructor"] = "void(coord3d, integer, integer)"
 	export_types_ai["coord3d::get_halt"] = "halt_x(player_x)"
 	export_types_ai["settings::get_industry_increase_every"] = "integer()"
