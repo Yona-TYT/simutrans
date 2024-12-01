@@ -481,14 +481,6 @@ public:
 	 */
 	const char* jump_to_link_executed(koord3d pos);
 
-	/**
-	 * Send simple data from script tool to scenario script
-	 *
-	 * @param str string with the values ​​sent
-	 *
-	 */
-	const char* tool_data_to_scenario(const char *str);
-
 	/// @return debug dump of forbidden tools
 	const char* get_forbidden_text();
 	/// @}
