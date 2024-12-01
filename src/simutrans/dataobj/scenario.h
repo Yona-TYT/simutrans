@@ -95,12 +95,16 @@ private:
 
 		enum forbid_type {
 			forbid_tool      = 1,
-			forbid_tool_rect = 2
+			forbid_tool_rect = 2,
+			allow_tool = 3,
+			allow_tool_rect = 4
 		};
 
 		forbid_type type;
 		/// id of tool to be forbidden, as set by constructors of classes derived from
 		/// tool_t, @see tool/simtool.h
+		bool allow;
+
 		uint16 toolnr;
 		/// waytype of tool, @see waytype_t
 		sint16 waytype;
@@ -111,8 +115,8 @@ private:
 		plainstring error;
 
 		/// constructor: forbid tool/etc for a certain player
-		forbidden_t(forbid_type type_=forbid_tool, uint16 toolnr_=0, sint16 waytype_=invalid_wt, const char *param_=NULL) :
-			type(type_), toolnr(toolnr_), waytype(waytype_),
+		forbidden_t(forbid_type type_=forbid_tool, bool allow_ = false, uint16 toolnr_=0, sint16 waytype_=invalid_wt, const char *param_=NULL) :
+			type(type_), allow(allow_), toolnr(toolnr_), waytype(waytype_),
 			pos_nw(koord::invalid), pos_se(koord::invalid), hmin(-128), hmax(127), error()
 		{
 			parameter_hash = string_to_hash(param_);
@@ -163,6 +167,7 @@ private:
 			file->rdwr_byte(hmin);
 			file->rdwr_byte(hmax);
 			file->rdwr_str(error);
+			file->rdwr_bool(allow);
 		}
 
 		void rotate90(const sint16 y_size);
@@ -204,6 +209,8 @@ private:
 	 * @param forbid if true puts, if false removes into/from list
 	 */
 	void intern_forbid(forbidden_t *test, uint player_nr, bool forbid);
+
+	void intern_forbid_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord3d pos_nw, koord3d pos_se, plainstring err, bool allow);
 
 	/**
 	 * Helper function: works on forbidden_tools directly (if not in network-mode)
@@ -396,6 +403,8 @@ public:
 	 * @see forbid_way_tool_rect
 	 */
 	void allow_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se);
+
+	void allow_test_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se);
 
 	/**
 	 * Forbid tool with certain waytype within cubic region on the map.
