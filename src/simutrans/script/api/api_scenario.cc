@@ -219,8 +219,6 @@ void export_scenario(HSQUIRRELVM vm)
 	 */
 	STATIC register_method(vm, &scenario_t::allow_way_tool_rect,  "allow_way_tool_rect");
 
-	STATIC register_method(vm, &scenario_t::allow_test_way_tool_rect,  "allow_test_way_tool_rect");
-
 	/**
 	 * Forbid tool with certain waytype within cubic region on the map.
 	 *

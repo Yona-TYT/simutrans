@@ -402,14 +402,14 @@ void scenario_t::allow_tool(uint8 player_nr, uint16 tool_id)
 
 void scenario_t::forbid_way_tool(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param)
 {
-	forbidden_t *test = new forbidden_t(forbidden_t::forbid_tool, false, tool_id, wt, param);
+	forbidden_t *test = new forbidden_t(forbidden_t::forbid_tool, tool_id, wt, param);
 	call_forbid_tool(test, player_nr, true);
 }
 
 
 void scenario_t::allow_way_tool(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param)
 {
-	forbidden_t *test = new forbidden_t(forbidden_t::forbid_tool, false, tool_id, wt, param);
+	forbidden_t *test = new forbidden_t(forbidden_t::forbid_tool, tool_id, wt, param);
 	call_forbid_tool(test, player_nr, false);
 }
 
@@ -425,19 +425,8 @@ void scenario_t::allow_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t 
 	allow_way_tool_cube(player_nr, tool_id, wt, param, koord3d(pos_nw, -128), koord3d(pos_se, 127));
 }
 
-void scenario_t::allow_test_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se)
-{
-	intern_forbid_way_tool_cube(player_nr, tool_id, wt, param, koord3d(pos_nw, -128), koord3d(pos_se, 127), (plainstring)"", true);
-}
 
-
-void scenario_t::forbid_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord3d pos_nw, koord3d pos_se, plainstring err)
-{
-	intern_forbid_way_tool_cube(player_nr, tool_id, wt, param, pos_nw, pos_se, err, false);
-}
-
-
-void scenario_t::intern_forbid_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord3d pos_nw_0, koord3d pos_se_0, plainstring err, bool allow)
+void scenario_t::forbid_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord3d pos_nw_0, koord3d pos_se_0, plainstring err)
 {
 	koord pos_nw( min(pos_nw_0.x, pos_se_0.x), min(pos_nw_0.y, pos_se_0.y));
 	koord pos_se( max(pos_nw_0.x, pos_se_0.x), max(pos_nw_0.y, pos_se_0.y));
@@ -446,7 +435,6 @@ void scenario_t::intern_forbid_way_tool_cube(uint8 player_nr, uint16 tool_id, wa
 
 	forbidden_t *test = new forbidden_t(tool_id, wt, param, pos_nw, pos_se, hmin, hmax);
 	test->error = err;
-	test->allow = allow;
 	call_forbid_tool(test, player_nr, true);
 }
 
@@ -461,7 +449,6 @@ void scenario_t::allow_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t 
 	forbidden_t *test = new forbidden_t(tool_id, wt, param, pos_nw, pos_se, hmin, hmax);
 	call_forbid_tool(test, player_nr, false);
 }
-
 
 
 void scenario_t::clear_rules()
@@ -575,7 +562,7 @@ const char* scenario_t::is_work_allowed_here(const player_t* player, uint16 tool
 								if (err == NULL) {
 									err = "";
 								}
-								return f.allow? NULL : err;
+								return err;
 							}
 						}
 					}
