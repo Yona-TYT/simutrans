@@ -568,6 +568,26 @@ const char* scenario_t::is_work_allowed_here(const player_t* player, uint16 tool
 					}
 				}
 			}
+			forbidden_t test3(forbidden_t::allow_tool_rect, tool_id, wt, param);
+			for (uint32 i = find_first_type_tool_wt(test3, player_nr); i < forbidden_tools[player_nr].get_count(); i++) {
+				// there is something, we need to test more
+				forbidden_t const& f = *forbidden_tools[player_nr][i];
+				if (f.type != forbidden_t::allow_tool_rect || f.toolnr != tool_id) {
+					// reached end of forbidden tools with this id => done
+					break;
+				}
+				if (f.waytype == invalid_wt  ||  f.waytype == wt) {
+					if (f.parameter_hash == 0  ||  f.parameter_hash == p_hash) {
+						// parameter matches too => check rectangle
+						if (f.pos_nw.x <= pos.x && f.pos_nw.y <= pos.y && pos.x <= f.pos_se.x && pos.y <= f.pos_se.y) {
+							// check height
+							if (f.hmin <= pos.z && pos.z <= f.hmax) {
+								return NULL;
+							}
+						}
+					}
+				}
+			}
 		}
 		if (player_nr == PLAYER_UNOWNED) {
 			break;

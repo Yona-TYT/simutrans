@@ -94,8 +94,9 @@ private:
 		}
 
 		enum forbid_type {
-			forbid_tool      = 1,
-			forbid_tool_rect = 2
+			forbid_tool			= 1,
+			allow_tool_rect 	= 2,
+			forbid_tool_rect	= 3
 		};
 
 		forbid_type type;
@@ -204,6 +205,9 @@ private:
 	 * @param forbid if true puts, if false removes into/from list
 	 */
 	void intern_forbid(forbidden_t *test, uint player_nr, bool forbid);
+
+	void intern_forbid_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord3d pos_nw, koord3d pos_se, plainstring err, forbidden_t::forbid_type type);
+
 
 	/**
 	 * Helper function: works on forbidden_tools directly (if not in network-mode)
@@ -396,6 +400,8 @@ public:
 	 * @see forbid_way_tool_rect
 	 */
 	void allow_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se);
+
+	void allow_test_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se);
 
 	/**
 	 * Forbid tool with certain waytype within cubic region on the map.
