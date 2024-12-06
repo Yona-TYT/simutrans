@@ -395,7 +395,7 @@ public:
 	 * @ingroup squirrel-api
 	 * @see forbid_way_tool_rect
 	 */
-	void allow_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se);
+	void clear_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se);
 
 	/**
 	 * Forbid tool with certain waytype within cubic region on the map.
@@ -415,7 +415,7 @@ public:
 	 * @ingroup squirrel-api
 	 * @see forbid_way_tool_cube
 	 */
-	void allow_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord3d pos_nw, koord3d pos_se);
+	void clear_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord3d pos_nw, koord3d pos_se);
 
 	/**
 	 * Clears all rules.

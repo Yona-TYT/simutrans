@@ -303,7 +303,7 @@ function test_scenario_rules_allow_forbid_tool_stacked_rect()
 			])
 	}
 
-	rules.allow_way_tool_rect(0, tool_build_way, wt_road, "", coord(2, 2), coord(13, 13))
+	rules.clear_way_tool_rect(0, tool_build_way, wt_road, "", coord(2, 2), coord(13, 13))
 
 	// try building in allowed ring, does not work because rules cannot be stacked
 	{
@@ -369,7 +369,7 @@ function test_scenario_rules_allow_forbid_tool_stacked_cube()
 			])
 	}
 
-	rules.allow_way_tool_cube(0, tool_build_way, wt_road, "", coord3d(2, 2, 0), coord3d(13, 13, 0))
+	rules.clear_way_tool_cube(0, tool_build_way, wt_road, "", coord3d(2, 2, 0), coord3d(13, 13, 0))
 
 	// try building in allowed ring, does not work because rules cannot be stacked
 	{

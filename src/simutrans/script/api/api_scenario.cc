@@ -217,7 +217,7 @@ void export_scenario(HSQUIRRELVM vm)
 	 * @param pos_se coordinate of south-eastern corner of rectangle
 	 * @see tool_ids way_types player_all
 	 */
-	STATIC register_method(vm, &scenario_t::allow_way_tool_rect,  "allow_way_tool_rect");
+	STATIC register_method(vm, &scenario_t::clear_way_tool_rect,  "clear_way_tool_rect");
 
 	/**
 	 * Forbid tool with certain waytype within cubic region on the map.
@@ -246,7 +246,7 @@ void export_scenario(HSQUIRRELVM vm)
 	 * @param pos_se 3d-coordinate of south-eastern corner of cube
 	 * @see tool_ids way_types player_all
 	 */
-	STATIC register_method(vm, &scenario_t::allow_way_tool_cube,  "allow_way_tool_cube");
+	STATIC register_method(vm, &scenario_t::clear_way_tool_cube,  "clear_way_tool_cube");
 
 	/**
 	 * Clear all forbidding rules, effectively allowing all tools again that were forbidden using functions of the table @ref rules.

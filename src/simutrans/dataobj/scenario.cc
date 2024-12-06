@@ -420,9 +420,9 @@ void scenario_t::forbid_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t
 }
 
 
-void scenario_t::allow_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se)
+void scenario_t::clear_way_tool_rect(uint8 player_nr, uint16 tool_id, waytype_t wt, const char* param, koord pos_nw, koord pos_se)
 {
-	allow_way_tool_cube(player_nr, tool_id, wt, param, koord3d(pos_nw, -128), koord3d(pos_se, 127));
+	clear_way_tool_cube(player_nr, tool_id, wt, param, koord3d(pos_nw, -128), koord3d(pos_se, 127));
 }
 
 
@@ -439,7 +439,7 @@ void scenario_t::forbid_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t
 }
 
 
-void scenario_t::allow_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char *param, koord3d pos_nw_0, koord3d pos_se_0)
+void scenario_t::clear_way_tool_cube(uint8 player_nr, uint16 tool_id, waytype_t wt, const char *param, koord3d pos_nw_0, koord3d pos_se_0)
 {
 	koord pos_nw( min(pos_nw_0.x, pos_se_0.x), min(pos_nw_0.y, pos_se_0.y));
 	koord pos_se( max(pos_nw_0.x, pos_se_0.x), max(pos_nw_0.y, pos_se_0.y));
