@@ -261,8 +261,6 @@ void export_scenario(HSQUIRRELVM vm)
 	 */
 	STATIC register_method(vm, &scenario_t::gui_needs_update,  "gui_needs_update");
 
-	STATIC register_method(vm, &scenario_t::allow_test_way_tool_rect,  "allow_test_way_tool_rect");
-
 	end_class(vm);
 
 
