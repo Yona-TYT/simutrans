@@ -6,6 +6,15 @@
 #ifndef TPL_FREELIST_TPL_H
 #define TPL_FREELIST_TPL_H
 
+struct nodelist_node_t
+{
+#ifdef DEBUG_FREELIST
+	unsigned magic : 15;
+	unsigned free : 1;
+#endif
+	nodelist_node_t* next;
+};
+
 #include <typeinfo>
 
 #include "../simmem.h"
@@ -24,23 +33,9 @@
   * A template class for const sized memory pool
   * Must be a static member! Does not use exceptions
   */
-class freelist_size_t
+template<class T> class freelist_tpl
 {
 private:
-	struct nodelist_node_t
-	{
-#ifdef DEBUG_FREELIST
-		char canary[4];
-#endif
-		nodelist_node_t* next;
-	};
-
-	char canary_free[4] = "\xAA\x55\xAA";
-	char canary_used[4] = "\x55\xAA\x55";
-
-	size_t NODE_SIZE;
-	size_t new_chuck_size;
-
 	// next free node (or NULL)
 	nodelist_node_t* freelist;
 
@@ -50,25 +45,16 @@ private:
 	// list of all allocated memory
 	nodelist_node_t* chunk_list;
 
+	const size_t new_chuck_size = (32768 - sizeof(void*)) / sizeof(T);
+
 #ifdef MULTI_THREADx
 	pthread_mutex_t freelist_mutex = PTHREAD_MUTEX_INITIALIZER;;
 #endif
 
 public:
-	freelist_size_t(size_t size) :
-		freelist(0),
-		nodecount(0),
-		chunk_list(0)
-	{
-		NODE_SIZE = (size + sizeof(nodelist_node_t) - sizeof(nodelist_node_t*));
-		new_chuck_size = ((32768 - sizeof(void*)) / NODE_SIZE);
-		canary_free[3] = canary_used[3] = NODE_SIZE;
-	}
+	freelist_tpl() : freelist(0), nodecount(0), chunk_list(0) {}
 
-	~freelist_size_t()
-	{
-		free_all_nodes();
-	}
+	freelist_tpl(size_t ncs) : freelist(0), nodecount(0), chunk_list(0), new_chuck_size(ncs) {}
 
 	void *gimme_node()
 	{
@@ -77,7 +63,8 @@ public:
 #endif
 		nodelist_node_t *tmp;
 		if (freelist == NULL) {
-			char* p = (char*)xmalloc(new_chuck_size*NODE_SIZE + sizeof(nodelist_node_t));
+			int chunksize = 0x1000;
+			char* p = (char*)xmalloc(chunksize *sizeof(T) + sizeof(nodelist_node_t));
 
 #ifdef USE_VALGRIND_MEMCHECK
 			// tell valgrind that we still cannot access the pool p
@@ -96,19 +83,13 @@ public:
 			chunk_list = chunk;
 			p += sizeof(nodelist_node_t);
 			// then enter nodes into nodelist
-			for (int i = 0; i < new_chuck_size; i++) {
-				nodelist_node_t* tmp = (nodelist_node_t*)(p + i*NODE_SIZE);
+			for (int i = 0; i < chunksize; i++) {
+				nodelist_node_t* tmp = (nodelist_node_t*)(p + i * sizeof(T));
 #ifdef USE_VALGRIND_MEMCHECK
 				// tell valgrind that we reserved space for one nodelist_node_t
 				VALGRIND_CREATE_MEMPOOL(tmp, 0, false);
 				VALGRIND_MEMPOOL_ALLOC(tmp, tmp, sizeof(*tmp));
 				VALGRIND_MAKE_MEM_UNDEFINED(tmp, sizeof(*tmp));
-#endif
-#ifdef DEBUG_FREELIST
-				tmp->canary[0] = canary_free[0];
-				tmp->canary[1] = canary_free[1];
-				tmp->canary[2] = canary_free[2];
-				tmp->canary[3] = canary_free[3];
 #endif
 				tmp->next = freelist;
 				freelist = tmp;
@@ -130,10 +111,8 @@ public:
 #endif
 
 #ifdef DEBUG_FREELIST
-		assert(tmp->canary[0] == canary_free[0] && tmp->canary[1] == canary_free[1] && tmp->canary[2] == canary_free[2] && tmp->canary[3] == canary_free[3]);
-		tmp->canary[0] = canary_used[0];
-		tmp->canary[1] = canary_used[1];
-		tmp->canary[2] = canary_used[2];
+		tmp->magic = 0x5555;
+		tmp->free = 0;
 #endif
 		nodecount++;
 
@@ -173,12 +152,9 @@ public:
 		// putback to first node
 		nodelist_node_t* tmp = (nodelist_node_t*)p;
 #ifdef DEBUG_FREELIST
-		size_t min_size = sizeof(nodelist_node_t) - sizeof(void*);
 		tmp = (nodelist_node_t*)((char*)p - min_size);
-		assert(tmp->canary[0] == canary_used[0] && tmp->canary[1] == canary_used[1] && tmp->canary[2] == canary_used[2] && tmp->canary[3] == canary_used[3]);
-		tmp->canary[0] = canary_free[0];
-		tmp->canary[1] = canary_free[1];
-		tmp->canary[2] = canary_free[2];
+		assert(tmp->magic == 0x5555 && tmp->free == 0 && tmp->size == size / 4);
+		tmp->free = 1;
 #endif
 		tmp->next = freelist;
 		freelist = tmp;
@@ -194,20 +170,5 @@ public:
 	}
 
 };
-
-
-
-template<class T> class freelist_tpl
-{
-private:
-	freelist_size_t fli;
-public:
-	freelist_tpl() : fli(sizeof(T)) {}
-	T *gimme_node() { return (T *)fli.gimme_node(); }
-	void putback_node(void* p) { return fli.putback_node(p); }
-	void free_all_nodes() { fli.free_all_nodes(); }
-};
-
-
 
 #endif

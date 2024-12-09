@@ -28,6 +28,7 @@
 #include "../../obj/signal.h"
 #include "../../obj/tunnel.h"
 #include "../../obj/wayobj.h"
+#include "../../obj/pillar.h"
 #include "../../player/simplay.h"
 
 // for depot tools
@@ -448,6 +449,23 @@ static const fabrik_t* transformer_get_factory(leitung_t *lt)
 	return NULL;
 }
 
+static void build_pillar(bruecke_t *br)
+{
+	const bridge_desc_t* desc = br->get_desc();
+
+	koord pos;
+	pos.x = 10;
+	pos.y = 10;
+	grund_t *gr = welt->lookup_kartenboden(pos);
+	player_t* player = welt->get_active_player();
+	
+
+	gr->obj_add( new pillar_t(gr->get_pos(), player, desc, desc->get_pillar(ribi_t::northeast), TILE_HEIGHT_STEP*1) ); 
+
+	
+	dbg->warning("API messge","--------- Desc %d ",desc->get_max_length());
+}
+
 static bool leitung_is_connected(leitung_t* lt1, leitung_t* lt2)
 {
 	return lt2 != NULL  &&  lt1->get_net() == lt2->get_net();
@@ -808,6 +826,9 @@ void export_map_objects(HSQUIRRELVM vm)
 	/**
 	 * @returns object descriptor.
 	 */
+
+	register_method(vm, &build_pillar, "build_pillar", true);
+
 	register_method(vm, &bruecke_t::get_desc, "get_desc");
 	end_class(vm);
 

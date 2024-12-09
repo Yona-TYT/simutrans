@@ -296,7 +296,6 @@ void export_player(HSQUIRRELVM vm, bool scenario)
 	 * @typemask line_list_x()
 	 */
 	register_function(vm, &player_export_line_list, "get_line_list", 1, param<player_t*>::typemask());
-
 	/**
 	 * Creates a new line for the player of the given way type.
 	 * @param wt way type
@@ -307,6 +306,10 @@ void export_player(HSQUIRRELVM vm, bool scenario)
 	 * Returns player type: 1 = human, 2,3 = old c++ AI, 4 = scripted AI
 	 */
 	register_method(vm, &player_t::get_ai_id, "get_type");
+	/**
+	 * Returns player number id.
+	 */
+	register_method(vm, &player_t::get_player_nr, "get_id");
 
 	end_class(vm);
 }

@@ -32,15 +32,12 @@ private:
 	struct nodelist_node_t
 	{
 #ifdef DEBUG_FREELIST
-		char canary[4];
+		unsigned magic : 15;
+		unsigned free : 1;
 #endif
 		nodelist_node_t* next;
 	};
 
-	const char *canary_free = "\xAA\x55\xAA";
-	const char *canary_used = "\x55\xAA\x55";
-
-	#define NODE_SIZE (sizeof(T) + sizeof(nodelist_node_t)-sizeof(nodelist_node_t *))
 
 #ifdef MULTI_THREADx
 	pthread_mutex_t freelist_mutex = PTHREAD_MUTEX_INITIALIZER;;
@@ -54,12 +51,12 @@ private:
 
 	// we aim for near 32 kB chunks, hoping that the system will allocate them on each page
 	// and they fit the L1 cache
-	const size_t new_chuck_size = (32250*8) / (NODE_SIZE*8+1);
+	const size_t new_chuck_size = (32250*8) / (sizeof(T)*8+1);
 
 	struct chunklist_node_t {
 		chunklist_node_t *chunk_next;
 		// marking empty and allocated tiles for fast interation
-		std::bitset<(32250*8) / (NODE_SIZE*8+1)> allocated_mask;
+		std::bitset<(32250 * 8) / (sizeof(T) * 8 + 1)> allocated_mask;
 	};
 
 	// list of all allocated memory
@@ -68,13 +65,13 @@ private:
 	void change_obj(char *p,bool b)
 	{
 		char *c_list = (char *)chunk_list;
-		const size_t chunk_mem_size = sizeof(chunklist_node_t) + (NODE_SIZE * new_chuck_size);
+		const size_t chunk_mem_size = sizeof(chunklist_node_t) + sizeof(T) * new_chuck_size;
 		while (c_list && (p<c_list || c_list+chunk_mem_size <p)) {
 			// not in this chunk => continue
 			c_list = (char *)((chunklist_node_t *)c_list)->chunk_next;
 		}
 		// we have found us (or we crash on error)
-		size_t index = ((p - c_list) - sizeof(chunklist_node_t)) / NODE_SIZE;
+		size_t index = ((p - c_list) - sizeof(chunklist_node_t)) / sizeof(T);
 		assert(index < new_chuck_size);
 		((chunklist_node_t*)c_list)->allocated_mask.set(index, b);
 	}
@@ -104,17 +101,16 @@ public:
 	{
 		chunklist_node_t* c_list = chunk_list;
 		while (c_list) {
-			char *p = ((char *)c_list)+sizeof(chunklist_node_t);
+			T  *p = (T *)(((char *)c_list)+sizeof(chunklist_node_t));
 			for (unsigned i = 0; i < new_chuck_size; i++) {
 				if (c_list->allocated_mask.test(i)) {
 					// is active object
-					T *obj = (T *)&(((nodelist_node_t*)(p + (i * NODE_SIZE)))->next);
-					if (sync_result result = obj->sync_step(delta_t)) {
+					if (sync_result result = p[i].sync_step(delta_t)) {
 						// remove from sync
 						c_list->allocated_mask.set(i, false);
 						// and maybe delete
 						if (result == SYNC_DELETE) {
-							delete obj;
+							delete (p+i);
 							if (nodecount == 0) {
 								return; // since even the main chunk list became invalid
 							}
@@ -139,7 +135,7 @@ public:
 #endif
 		nodelist_node_t *tmp;
 		if (freelist == NULL) {
-			char* p = (char*)xmalloc(new_chuck_size*NODE_SIZE + sizeof(chunklist_node_t));
+			char* p = (char*)xmalloc(new_chuck_size *sizeof(T)+sizeof(chunklist_node_t));
 			memset(p, 0, sizeof(chunklist_node_t)); // clear allocation bits and next pointer
 
 #ifdef USE_VALGRIND_MEMCHECK
@@ -160,18 +156,12 @@ public:
 			p += sizeof(chunklist_node_t);
 			// then enter nodes into nodelist
 			for (size_t i = 0; i < new_chuck_size; i++) {
-				nodelist_node_t* tmp = (nodelist_node_t*)(p + i * NODE_SIZE);
+				nodelist_node_t* tmp = (nodelist_node_t*)(p + i * sizeof(T));
 #ifdef USE_VALGRIND_MEMCHECK
 				// tell valgrind that we reserved space for one nodelist_node_t
 				VALGRIND_CREATE_MEMPOOL(tmp, 0, false);
 				VALGRIND_MEMPOOL_ALLOC(tmp, tmp, sizeof(*tmp));
 				VALGRIND_MAKE_MEM_UNDEFINED(tmp, sizeof(*tmp));
-#endif
-#ifdef DEBUG_FREELIST
-				tmp->canary[0] = canary_free[0];
-				tmp->canary[1] = canary_free[1];
-				tmp->canary[2] = canary_free[2];
-				tmp->canary[3] = sizeof(T);
 #endif
 				tmp->next = freelist;
 				freelist = tmp;
@@ -195,10 +185,8 @@ public:
 #endif
 
 #ifdef DEBUG_FREELIST
-		assert(tmp->canary[0] == canary_free[0] && tmp->canary[1] == canary_free[1] && tmp->canary[2] == canary_free[2] && tmp->canary[3] == sizeof(T));
-		tmp->canary[0] = canary_used[0];
-		tmp->canary[1] = canary_used[1];
-		tmp->canary[2] = canary_used[2];
+		tmp->magic = 0x5555;
+		tmp->free = 0;
 #endif
 		nodecount++;
 
@@ -221,12 +209,9 @@ public:
 		// putback to first node
 		nodelist_node_t* tmp = (nodelist_node_t*)p;
 #ifdef DEBUG_FREELIST
-		size_t min_size = sizeof(nodelist_node_t) - sizeof(void*);
 		tmp = (nodelist_node_t*)((char*)p - min_size);
-		assert(tmp->canary[0] == canary_used[0] && tmp->canary[1] == canary_used[1] && tmp->canary[2] == canary_used[2] && tmp->canary[3] == sizeof(T));
-		tmp->canary[0] = canary_free[0];
-		tmp->canary[1] = canary_free[1];
-		tmp->canary[2] = canary_free[2];
+		assert(tmp->magic == 0x5555 && tmp->free == 0 && tmp->size == size / 4);
+		tmp->free = 1;
 #endif
 
 		tmp->next = freelist;
@@ -245,7 +230,5 @@ public:
 	}
 
 };
-
-#undef NODE_SIZE
 
 #endif

@@ -17,6 +17,8 @@
 #include "../world/simworld.h"
 #include "../obj/zeiger.h"
 
+#include "../dataobj/scenario.h"
+
 void export_scripted_tools(HSQUIRRELVM vm);
 
 // -- callback to receive error messages from work/do_work calls
@@ -66,6 +68,23 @@ namespace script_api {
 		static SQInteger push(HSQUIRRELVM vm, tool_exec_two_click_script_t* const& tool)
 		{
 			SQInteger res = push_instance(vm, "command_x", (uint32)(TOOL_EXEC_TWO_CLICK_SCRIPT | GENERAL_TOOL) );
+			if (SQ_SUCCEEDED(res)) {
+				my_tool_t* mtool = new my_tool_t(tool);
+				attach_instance(vm, -1, mtool);
+			}
+			return res;
+		}
+	};
+	template<> struct param<tool_exec_script_t*> {
+		static tool_exec_script_t* get(HSQUIRRELVM vm, SQInteger index)
+		{
+			tool_t* tool = param<tool_t*>::get(vm, index);
+			return tool ? dynamic_cast<tool_exec_script_t*>(tool) : NULL;
+		}
+
+		static SQInteger push(HSQUIRRELVM vm, tool_exec_script_t* const& tool)
+		{
+			SQInteger res = push_instance(vm, "command_x", (uint32)(TOOL_EXEC_SCRIPT | GENERAL_TOOL) );
 			if (SQ_SUCCEEDED(res)) {
 				my_tool_t* mtool = new my_tool_t(tool);
 				attach_instance(vm, -1, mtool);
@@ -200,6 +219,8 @@ tool_exec_script_t::tool_exec_script_t(const scripted_tool_info_t *info) : tool_
 }
 
 
+SQInteger tool_sender(HSQUIRRELVM vm); // see below
+
 bool tool_exec_script_t::init(player_t* player)
 {
 	bool res = false;
@@ -212,7 +233,47 @@ bool tool_exec_script_t::init(player_t* player)
 		cursor_area = koord(old_area.y, old_area.x);
 		cursor_offset = koord(old_area.y-1-old_offset.y, old_offset.x);
 	}
+
+	if (init_vm(player)) {
+		HSQUIRRELVM vm = script->get_vm();
+		// put pointer to this tool into registry
+		sq_pushregistrytable(vm);
+		script_api::create_slot(vm, "my_tool", this);
+		sq_poptop(vm);
+		// export marker function
+		sq_pushroottable(vm);
+		script_api::register_function(vm, tool_sender, "intern_send_data", 2, "..", false ); 
+		sq_poptop(vm);
+	}
+
 	return init_vm(player)  &&  call_function(script_vm_t::FORCE, "init", player, res)== NULL  &&  res;
+}
+
+
+// send simple data
+SQInteger tool_sender(HSQUIRRELVM vm)
+{
+	plainstring str = script_api::param<plainstring>::get(vm, 2);
+
+	// restore sender data--------
+	karte_t *welt = world();
+	scenario_t	*scen = welt->get_scenario();
+	const char* err = scen->tool_data_to_scenario(str);
+
+	if (err) {
+		dbg->warning("scenario_t::rdwr", "error [%s] evaluating persistent scenario data", err);
+		return SQ_ERROR;
+	}
+
+	// tool
+	sq_pushregistrytable(vm);
+	tool_exec_script_t* tool = NULL;
+	if (!SQ_SUCCEEDED(script_api::get_slot<tool_exec_script_t*>(vm, "my_tool", tool))  ||  tool == NULL) {
+		return SQ_ERROR;
+	}
+	sq_poptop(vm);
+
+	return SQ_OK;
 }
 
 
@@ -263,6 +324,7 @@ tool_exec_two_click_script_t::tool_exec_two_click_script_t(const scripted_tool_i
 
 
 SQInteger script_mark_tile(HSQUIRRELVM vm); // see below
+SQInteger two_click_tool_sender(HSQUIRRELVM vm); 
 
 bool tool_exec_two_click_script_t::init(player_t* player)
 {
@@ -284,6 +346,7 @@ bool tool_exec_two_click_script_t::init(player_t* player)
 		// export marker function
 		sq_pushroottable(vm);
 		script_api::register_function(vm, script_mark_tile, "mark_tile", 2, ". t|x|y", false /* static */);
+		script_api::register_function(vm, two_click_tool_sender, "intern_send_data", 2, "..", false ); 
 		sq_poptop(vm);
 	}
 	return res  &&   call_function(script_vm_t::FORCE, "init", player, res)== NULL  &&  res;
@@ -363,6 +426,33 @@ SQInteger script_mark_tile(HSQUIRRELVM vm)
 	sq_poptop(vm);
 	// now call the method
 	return script_api::param<bool>::push(vm, tool->mark_tile(player, pos) );
+}
+
+
+// send simple data
+SQInteger two_click_tool_sender(HSQUIRRELVM vm)
+{
+	plainstring str = script_api::param<plainstring>::get(vm, 2);
+
+	// restore sender data--------
+	karte_t *welt = world();
+	scenario_t	*scen = welt->get_scenario();
+	const char* err = scen->tool_data_to_scenario(str);
+
+	if (err) {
+		dbg->warning("scenario_t::rdwr", "error [%s] evaluating persistent scenario data", err);
+		return SQ_ERROR;
+	}
+
+	// tool
+	sq_pushregistrytable(vm);
+	tool_exec_two_click_script_t* tool = NULL;
+	if (!SQ_SUCCEEDED(script_api::get_slot<tool_exec_two_click_script_t*>(vm, "my_two_click_tool", tool))  ||  tool == NULL) {
+		return SQ_ERROR;
+	}
+	sq_poptop(vm);
+
+	return SQ_OK;
 }
 
 

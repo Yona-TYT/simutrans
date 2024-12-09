@@ -758,6 +758,25 @@ const char* scenario_t::jump_to_link_executed(koord3d pos)
 	return NULL;
 }
 
+const char* scenario_t::tool_data_to_scenario(const char *str)
+{
+	if (what_scenario == SCRIPTED) {
+		return script->eval_string(str);
+	}
+	return NULL;
+}
+
+void scenario_t::is_message_chat(sint8 chanel, const player_t* player, const char *sender_nick, const char *recipient, koord pos, const char *msg)
+{
+	// call script
+	if (what_scenario == SCRIPTED) {
+		static plainstring str;
+		const player_t* curr_player = welt->get_active_player();
+		script->call_function(script_vm_t::FORCE, "is_message_chat", str, msg, player->get_player_nr(), chanel, sender_nick, recipient, pos, (uint8)(curr_player ? curr_player->get_player_nr() : PLAYER_UNOWNED));
+
+	}
+}
+
 const char* scenario_t::get_error_text()
 {
 	if (script) {

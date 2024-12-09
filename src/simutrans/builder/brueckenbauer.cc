@@ -853,7 +853,7 @@ void bridge_builder_t::build_bridge(player_t *player, const koord3d start, const
 				while(height-->0) {
 					if( TILE_HEIGHT_STEP*height <= 127) {
 						// eventual more than one part needed, if it is too high ...
-						gr->obj_add( new pillar_t(gr->get_pos(),player,desc,desc->get_pillar(ribi), TILE_HEIGHT_STEP*height) );
+						gr->obj_add( new pillar_t(gr->get_pos(),player,desc,desc->get_pillar(ribi), TILE_HEIGHT_STEP*height) ); 
 					}
 				}
 			}

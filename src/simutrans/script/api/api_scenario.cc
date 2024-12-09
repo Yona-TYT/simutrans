@@ -308,3 +308,4 @@ void export_scenario(HSQUIRRELVM vm)
 
 	end_class(vm);
 }
+

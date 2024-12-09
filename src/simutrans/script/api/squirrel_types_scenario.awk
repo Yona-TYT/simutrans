@@ -300,6 +300,7 @@ BEGIN {
 	export_types_scenario["player_x::get_current_maintenance"] = "integer()"
 	export_types_scenario["player_x::create_line"] = "void(way_types)"
 	export_types_scenario["player_x::get_type"] = "integer()"
+	export_types_scenario["player_x::get_id"] = "integer()"
 	export_types_scenario["::load_language_file"] = "string(string)"
 	export_types_scenario["rules::forbid_tool"] = "void(integer, integer)"
 	export_types_scenario["rules::allow_tool"] = "void(integer, integer)"

@@ -194,6 +194,7 @@ const char* script_vm_t::eval_string(const char* squirrel_string)
 	HSQUIRRELVM &job = thread;
 	// log string
 	printfunc(job, "String to compile:\n%s\n<<<\n", squirrel_string);
+
 	// compile string
 	if (!SQ_SUCCEEDED(sq_compilebuffer(job, squirrel_string, strlen(squirrel_string), "userdefinedstringmethod", true))) {
 		set_error("Error compiling string buffer");
@@ -202,6 +203,9 @@ const char* script_vm_t::eval_string(const char* squirrel_string)
 	// execute
 	sq_pushroottable(job);
 	// stack: closure, root table (1st param)
+
+
+
 	return intern_finish_call(job, QUEUE, 1, true);
 }
 
@@ -258,6 +262,7 @@ const char* script_vm_t::intern_finish_call(HSQUIRRELVM job, call_type_t ct, int
 	// only call the closure if vm is idle (maybe in RUN state)
 	bool suspended = sq_getvmstate(job) != SQ_VMSTATE_IDLE;
 	// check queue, if not empty resume first job in queue
+
 	if (!suspended  &&  ct != FORCE  &&  ct != FORCEX) {
 		sq_pushregistrytable(job);
 		sq_pushstring(job, "queue", -1);
@@ -270,6 +275,7 @@ const char* script_vm_t::intern_finish_call(HSQUIRRELVM job, call_type_t ct, int
 	}
 	// queue function call?
 	if (suspended  &&  ct == QUEUE) {
+
 		intern_queue_call(job, nparams, retvalue);
 		err = "suspended";
 		// stack: clean
