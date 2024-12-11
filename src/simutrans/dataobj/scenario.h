@@ -515,6 +515,15 @@ public:
 	 */
 	const char* jump_to_link_executed(koord3d pos);
 
+	/**
+	 * Called when sending data from a script tool to a scenario.
+	 *
+	 * @param str sender data from a script tool
+	 *
+	 * @return an error script message or null
+	 */
+	const char* tool_data_to_scenario(plainstring str);
+
 	/// @return debug dump of forbidden tools
 	const char* get_forbidden_text();
 	/// @}

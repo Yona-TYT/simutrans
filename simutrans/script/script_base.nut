@@ -16,6 +16,13 @@ function max(a, b) { return a > b ? a : b }
 persistent <- {}
 
 /**
+ * receive data from script tool
+ * the sender table will be written and sent from a script tool
+ * only plain data is saved: no classes / instances / functions, no cyclic references
+ */
+sender <- {}
+
+/**
  * writes the persistent table to a string
  */
 function save()

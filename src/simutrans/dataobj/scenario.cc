@@ -760,6 +760,16 @@ const char* scenario_t::jump_to_link_executed(koord3d pos)
 	return NULL;
 }
 
+
+const char* scenario_t::tool_data_to_scenario(plainstring str)
+{
+	if (what_scenario == SCRIPTED) {
+		return script->eval_string(str);
+	}
+	return NULL;
+}
+
+
 const char* scenario_t::get_error_text()
 {
 	if (script) {
