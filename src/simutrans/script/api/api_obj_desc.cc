@@ -157,7 +157,7 @@ const vector_tpl<const building_desc_t*>& get_available_stations(building_desc_t
 	}
 
 	// use wt_all (which is equal to invalid_wt, see api_const.cc) to get buildings for all waytypes
-	bool accept_all_wt = wt == invalid_wt  ||  wt == ignore_wt  ||  wt == any_wt;
+	bool accept_all_wt = wt == invalid_wt  ||  wt == ignore_wt;
 
 	uint16 time = welt->get_timeline_year_month();
 	for(building_desc_t const* const desc : *p) {
@@ -702,6 +702,10 @@ void export_goods_desc(HSQUIRRELVM vm)
 	 * @return maximal bridge height
 	 */
 	register_method(vm, &bridge_desc_t::get_max_height, "get_max_height");
+	/**
+	 * Returns a bridge with the given name
+	 */
+	STATIC register_method(vm, bridge_builder_t::get_desc, "get_desc", false, true);
 	/**
 	 * Returns a list with available bridge types.
 	 */

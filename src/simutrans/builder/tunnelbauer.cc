@@ -199,7 +199,7 @@ koord3d tunnel_builder_t::find_end_pos(player_t *player, koord3d pos, koord zv, 
 			return koord3d::invalid;
 		}
 
-		if (const char* err = welt->get_scenario()->is_work_allowed_here(player, TOOL_BUILD_TUNNEL|GENERAL_TOOL, wegtyp, desc->get_name(), pos)) {
+		if (const char* err = welt->get_scenario()->is_work_allowed_here(player, TOOL_BUILD_TUNNEL|GENERAL_TOOL, desc->get_finance_waytype(), desc->get_name(), pos)) {
 			if (msg) {
 				*msg = err;
 			}
@@ -370,6 +370,10 @@ const char *tunnel_builder_t::build( player_t *player, koord pos, const tunnel_d
 		return "Tunnel must start on single way!";
 	}
 	zv = koord(slope);
+
+	if (const char* err = welt->get_scenario()->is_work_allowed_here(player, TOOL_BUILD_TUNNEL | GENERAL_TOOL, desc->get_finance_waytype(), desc->get_name(), gr->get_pos())) {
+		return err;
+	}
 
 	// Search tunnel end and check intermediate tiles
 	const char *err = NULL;

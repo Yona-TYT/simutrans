@@ -186,6 +186,7 @@ public:
 	waytype_t get_waytype() const OVERRIDE { return powerline_wt; }
 };
 
+// default_string (optional) population,townhallname,rotation
 class tool_add_city_t : public kartenboden_tool_t {
 public:
 	tool_add_city_t() : kartenboden_tool_t(TOOL_ADD_CITY | GENERAL_TOOL) {}
@@ -409,7 +410,7 @@ private:
 	const char *tool_station_building_aux(player_t *, bool, koord3d, const building_desc_t *, sint8 rotation );
 	const char *tool_station_dock_aux(player_t *, koord3d, const building_desc_t * );
 	const char *tool_station_flat_dock_aux(player_t *, koord3d, const building_desc_t *, sint8 );
-	const char *tool_station_aux(player_t *, koord3d, const building_desc_t *, waytype_t, const char *halt_suffix );
+	const char *tool_station_aux(player_t *, koord3d, const building_desc_t *, sint8, waytype_t, const char *halt_suffix );
 	const building_desc_t *get_desc( sint8 &rotation ) const;
 
 public:
@@ -691,7 +692,7 @@ public:
 	tool_generate_script_t() : two_click_tool_t(TOOL_GENERATE_SCRIPT | GENERAL_TOOL) {}
 	char const* get_tooltip(player_t const*) const OVERRIDE { return translator::translate("generate script"); }
 	bool is_init_keeps_game_state() const OVERRIDE { return true; }
-	bool save_script(const char *fullpath, const char *command) const;
+	bool save_script(const char *fullpath, const char *command, koord area) const;
 private:
 	char const* do_work(player_t*, koord3d const&, koord3d const&) OVERRIDE;
 	void mark_tiles(player_t*, koord3d const&, koord3d const&) OVERRIDE;

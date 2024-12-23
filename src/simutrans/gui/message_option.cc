@@ -36,6 +36,9 @@ message_option_t::message_option_t() :
 	const unsigned char *p = (const unsigned char *)translator::translate( "MessageOptionsText" );
 	welt->get_message()->get_message_flags( &ticker_msg, &window_msg, &auto_msg, &ignore_msg );
 
+	for(  int i = 0;  i < message_t::MAX_MESSAGE_TYPE;  i++  ) {
+		option_texts[i][0] = 0;
+	}
 	for(  int i=0;  i<message_t::MAX_MESSAGE_TYPE;  i++  ) {
 
 		buttons[i*4].set_typ(button_t::square_state);

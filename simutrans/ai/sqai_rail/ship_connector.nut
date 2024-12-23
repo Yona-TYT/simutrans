@@ -64,8 +64,8 @@ class ship_connector_t extends manager_t
       }
       if ( (build_check_month > world.get_time().ticks || build_cost > build_cash) && industry_manager.get_combined_link(fsrc, fdest, freight) == 0 ) {
         // not build link
-        gui.add_message_at(our_player, "#ship_conn# not build line : build_check_month = " + build_check_month + " or build cost link > cash : build cost line " + industry_manager.get_link_build_cost(fsrc, fdest, freight, 3) + " | build cost link " + industry_manager.get_link_build_cost(fsrc, fdest, freight, 0), world.get_time())
-        gui.add_message_at(our_player, " ---> link " + fsrc + "  " + fsrc.get_name() + " - " + fdest.get_name(), world.get_time())
+        if ( debug ) gui.add_message_at(our_player, "#ship_conn# not build line : build_check_month = " + build_check_month + " or build cost link > cash : build cost line " + industry_manager.get_link_build_cost(fsrc, fdest, freight, 3) + " | build cost link " + industry_manager.get_link_build_cost(fsrc, fdest, freight, 0), world.get_time())
+        if ( debug ) gui.add_message_at(our_player, " ---> link " + fsrc + "  " + fsrc.get_name() + " - " + fdest.get_name(), world.get_time())
 
         industry_manager.set_link_state(fsrc, fdest, freight, industry_link_t.st_missing)
 
@@ -660,7 +660,19 @@ class ship_connector_t extends manager_t
             if (err) gui.add_message_at(our_player, "Failed to flatten slope at " + coord_to_string(tile) +"\n" + err, tile)
           }
           if (err == null) {
-            err = command_x.build_station(our_player, tile, planned_harbour_flat, dir.backward(d_water_to_land))
+            local rotation = 0
+            switch (dir.backward(d_water_to_land)) {
+              case 2:
+                rotation = 1
+                break
+              case 1:
+                rotation = 2
+                break
+              case 8:
+                rotation = 3
+              default:
+            }
+            err = command_x.build_station(our_player, tile, planned_harbour_flat, rotation)
             if (err) gui.add_message_at(our_player, "Failed to build flat harbour at " + coord_to_string(tile) +"\n" + err, tile)
           }
           local size = planned_harbour_flat.get_size(0)

@@ -16,6 +16,7 @@ class script_generator_frame_t : public savegame_frame_t
 private:
 	tool_generate_script_t* tool;
 	cbuffer_t command;
+	koord area;
 	
 protected:
 	/**
@@ -23,7 +24,9 @@ protected:
 	 */
 	bool item_action(const char *fullpath) OVERRIDE;
 	
-	bool ok_action(const char *fullpath) OVERRIDE;
+	bool ok_action(const char* fullpath) OVERRIDE;
+
+	bool del_action(const char* fullpath) OVERRIDE;
 
 	/**
 	 * Returns extra file info: title of tool from description.tab
@@ -34,7 +37,7 @@ protected:
 	bool check_file( const char *filename, const char *suffix ) OVERRIDE;
 
 public:
-	script_generator_frame_t(tool_generate_script_t*, const char *path, cbuffer_t &cmd);
+	script_generator_frame_t(tool_generate_script_t*, const char *path, cbuffer_t &cmd, koord area);
 
 	/**
 	 * Set the window associated helptext

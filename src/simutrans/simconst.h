@@ -81,12 +81,11 @@
 /* shows with block needed update and which not */
 //#define DEBUG_FLUSH_BUFFER
 
-/* define USE_VALGRIND_MEMCHECK to make valgrind aware of the freelist memory pool */
-//#define USE_VALGRIND_MEMCHECK
-
-/* define this to check for double free and sizes for freelist */
+/* inserts debugging code into freelist_tpl/freelist_iter_tpl to aid with finding memory corruptions */
 //#define DEBUG_FREELIST
 
+/* define USE_VALGRIND_MEMCHECK to make valgrind aware of the freelist memory pool */
+//#define USE_VALGRIND_MEMCHECK
 
 /**************************** automatic stuff ********************************/
 

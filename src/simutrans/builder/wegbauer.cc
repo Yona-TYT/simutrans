@@ -679,7 +679,7 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 					return false;
 				}
 			}
-			if ((bautyp_mask & bautyp)==powerline_wt  &&  from->get_leitung()) {
+			if ((bautyp_mask & bautyp)==leitung  &&  from->get_leitung()) {
 				if (ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(from->get_leitung()->get_ribi())) {
 					return false;
 				}
@@ -691,7 +691,7 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 					return false;
 				}
 			}
-			if ((bautyp_mask & bautyp) == powerline_wt  &&  to->get_leitung()) {
+			if ((bautyp_mask & bautyp) == leitung  &&  to->get_leitung()) {
 				if (ribi_t::doubles(ribi_t::ribi(ribi_type(zv))) != ribi_t::doubles(to->get_leitung()->get_ribi())) {
 					return false;
 				}
@@ -1278,8 +1278,8 @@ way_builder_t::way_builder_t(player_t* player)
 	, keep_existing_ways(false)
 	, keep_existing_faster_ways(false)
 	, keep_existing_city_roads(false)
-	, build_sidewalk(false)
 	, prefer_parallel(false)
+	, build_sidewalk(false)
 {
 	maximum = welt->get_settings().way_count_maximum; // building cost, (curves etc.)
 }
@@ -2935,7 +2935,7 @@ class fluss_test_driver_t : public test_driver_t
 {
 	bool check_next_tile(const grund_t* gr) const OVERRIDE { return gr->get_weg_ribi_unmasked(water_wt)!=0; }
 	ribi_t::ribi get_ribi(const grund_t* gr) const OVERRIDE { return gr->get_weg_ribi_unmasked(water_wt); }
-	waytype_t get_waytype() const OVERRIDE { return invalid_wt; }
+	waytype_t get_waytype() const OVERRIDE { return ignore_wt; }
 	int get_cost(const grund_t *, const weg_t *, const sint32, ribi_t::ribi) const OVERRIDE { return 1; }
 	bool is_target(const grund_t *cur,const grund_t *) const OVERRIDE { return cur->is_water()  &&  cur->get_hoehe()<=world()->get_groundwater(); }
 };
