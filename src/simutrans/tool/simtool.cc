@@ -5001,7 +5001,7 @@ const char *tool_build_station_t::work( player_t *player, koord3d pos )
 		return msg;
 	}
 
-	if (label_t *lb) {
+	if (label_t *lb=gr->find<label_t>()) {
 		delete lb;
 	}
 
