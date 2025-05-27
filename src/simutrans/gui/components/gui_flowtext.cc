@@ -7,12 +7,20 @@
 #include <string.h>
 #include "../../simcolor.h"
 #include "../../simevent.h"
+#include "../../simskin.h"
+#include "../../descriptor/skin_desc.h"
+#include "../../descriptor/skin_desc.h"
 #include "../../display/simgraph.h"
+#include "../../display/simimg.h"
 #include "../../utils/simstring.h"
 #include "../../utils/unicode.h"
 #include "../gui_theme.h"
 
 #include "gui_flowtext.h"
+
+#include <iostream>
+#include <regex>
+#include <iterator>
 
 
 /**
@@ -71,6 +79,7 @@ private:
 		ATT_EM_START,     ATT_EM_END,
 		ATT_IT_START,     ATT_IT_END,
 		ATT_STRONG_START, ATT_STRONG_END,
+		ATT_IMG_START,    ATT_IMG_END,
 		ATT_UNKNOWN
 	};
 
@@ -94,8 +103,19 @@ private:
 		std::string  param;
 	};
 
+	/**
+	* Image position container
+	* @author Hayden Read
+	*/
+	struct image_t
+	{
+		image_t(const image_id id_):id(id_) {}
+		image_id id;
+	};
+
 	slist_tpl<node_t>      nodes;
 	slist_tpl<hyperlink_t> links;
+	slist_tpl<image_t>     images;
 	char title[128];
 
 	bool dirty;
@@ -119,6 +139,7 @@ void gui_flowtext_intern_t::set_text(const char *text)
 	// purge all old texts
 	nodes.clear();
 	links.clear();
+	images.clear();
 
 	// danger here, longest word in text must not exceed stoarge space!
 	char word[512];
@@ -189,6 +210,41 @@ void gui_flowtext_intern_t::set_text(const char *text)
 					}
 				}
 			}
+
+			else if (word[0] == 'i' && word[1] == 'm' && word[2] == 'g') {
+				if (!endtag) {
+					att = ATT_IMG_START;
+					// search for src attributes
+					// .. ignore any number of spaces
+					// .. accept link string enclosed by " and '
+					// skip a and ' '
+					char *start=word+4;
+					start = const_cast<char*>( strstart(start, "gadget") );
+					if (start) {
+						// skip ",=, and ' '
+						while(*start == '"'  ||  *start == ' '  ||  *start == '='  ||  *start == '\'') start++;
+						char *end = start;
+						// find first ',", terminate string there
+						while(*end  &&  *end != '"'  &&  *end != '\'') end++;
+						*end = 0;
+						param = start;
+					}
+					else {
+						param = "";
+					}
+					std::regex expr ("[-+]?\\d+");
+					if ( regex_match(param.c_str(), expr) ) {
+						int id = std::stoi(param.c_str());
+						if ( id < SKIN_GADGET_COUNT ) {
+							images.append(skinverwaltung_t::gadget->get_image(id)->get_id());
+						}
+					}
+				}
+				else {
+					att = ATT_IMG_END;
+				}
+			}
+
 			else if (word[0] == 'h' && word[1] == '1') {
 				att = endtag ? ATT_H1_END : ATT_H1_START;
 			}
@@ -201,6 +257,7 @@ void gui_flowtext_intern_t::set_text(const char *text)
 			else if (word[0] == 's' && word[1] == 't') {
 				att = endtag ? ATT_STRONG_END : ATT_STRONG_START;
 			}
+
 			else if (!endtag && strcmp(word, "title") == 0) {
 				// title tag
 				const unsigned char* title_start = lead;
@@ -359,6 +416,7 @@ scr_size gui_flowtext_intern_t::output(scr_coord offset, bool doit, bool return_
 	const int width = size.w-D_MARGIN_LEFT-D_MARGIN_RIGHT;
 
 	slist_tpl<hyperlink_t>::iterator link = links.begin();
+	slist_tpl<image_t>::iterator image = images.begin();
 
 	int xpos            = 0;
 	int ypos            = 0;
@@ -367,6 +425,8 @@ scr_size gui_flowtext_intern_t::output(scr_coord offset, bool doit, bool return_
 	bool double_it      = false;
 	bool link_it        = false; // true, if currently underlining for a link
 	int extra_pixel     = 0;     // extra pixel before next line
+	int extra_pixels    = 0;     // extra pixels for image display
+	int extra_x_pixels  = 0;     // extra pixels in x dimension for image display
 	int last_link_x     = 0;     // at this position ye need to continue underline drawing
 	int max_width    = width;
 	int text_width   = width;
@@ -397,8 +457,21 @@ scr_size gui_flowtext_intern_t::output(scr_coord offset, bool doit, bool return_
 							}
 							extra_pixel = 1;
 						}
-						xpos = 0;
-						last_link_x = 0;
+						if ( (extra_x_pixels + nxpos) > max_width ) {
+							ypos += extra_pixels;
+							extra_pixels = 0;
+							extra_x_pixels = 0;
+						}
+						if ( extra_pixels > 0 ) {
+							xpos = extra_x_pixels;
+							nxpos += extra_x_pixels;
+							extra_pixels -= LINESPACE+extra_pixel;
+						}
+						else {
+							xpos = 0;
+							extra_pixels = 0;
+						}
+						last_link_x = extra_x_pixels;
 						ypos += LINESPACE+extra_pixel;
 						extra_pixel = 0;
 					}
@@ -435,7 +508,9 @@ scr_size gui_flowtext_intern_t::output(scr_coord offset, bool doit, bool return_
 					}
 					extra_pixel = 1;
 				}
-				ypos += LINESPACE+extra_pixel;
+				ypos += LINESPACE + extra_pixel + extra_pixels;
+				extra_x_pixels=0;
+				extra_pixels=0;
 				last_link_x = 0;
 				extra_pixel = 0;
 				break;
@@ -504,6 +579,33 @@ scr_size gui_flowtext_intern_t::output(scr_coord offset, bool doit, bool return_
 				if(  !double_it  ) {
 					color = SYSCOL_TEXT;
 				}
+				break;
+
+			case ATT_IMG_START:
+				if (image != images.end()) {
+					//display image
+					scr_coord_val xoff, yoff, xw, yw;
+					display_get_base_image_offset( image->id, &xoff, &yoff, &xw, &yw );
+					if ( ( xpos + xw > max_width ) && ( xpos != 0 ) ) {
+						// New Line if image is too large to fit on line (unless already at new line)
+						xpos=0;
+						ypos += LINESPACE + extra_pixel + extra_pixels;
+						extra_pixel = 0;
+						extra_pixels = 0;
+						extra_x_pixels = 0;
+					}
+					if ( doit ) {
+						display_base_img( image->id, offset.x + last_link_x + xpos + xoff,  offset.y + ypos +  LINESPACE/4 - yoff, 0, false, false );
+					}
+					xpos += xw;
+					if ( extra_pixels < yw - LINESPACE ) {
+						extra_pixels = yw - LINESPACE;	// Set extra pixels for new line based on height of image.
+					}
+					extra_x_pixels = xpos;
+					++image;
+				}
+				break;
+			case ATT_IMG_END:
 				break;
 
 			default: break;
