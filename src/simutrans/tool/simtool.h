@@ -295,6 +295,8 @@ private:
 	void mark_tiles(player_t*, koord3d const&, koord3d const&) OVERRIDE;
 	uint8 is_valid_pos(player_t*, koord3d const&, char const*&, koord3d const&) OVERRIDE;
 
+	static const way_desc_t* get_desc_internal(const way_desc_t* desc, uint16 timeline_year_month, waytype_t wt);
+
 protected:
 	const way_desc_t *desc;
 
@@ -313,6 +315,8 @@ public:
 	waytype_t get_waytype() const OVERRIDE;
 	// remove preview necessary while building elevated ways
 	bool remove_preview_necessary() const OVERRIDE { return !is_first_click()  &&  (desc  &&  (desc->get_styp() == type_elevated  &&  desc->get_wtyp() != air_wt)); }
+
+	static const way_desc_t* get_last_used(waytype_t wt);
 };
 
 class tool_build_cityroad : public tool_build_way_t {
