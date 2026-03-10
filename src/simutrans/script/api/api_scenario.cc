@@ -56,6 +56,42 @@ static plainstring koord3d_to_string_intern(koord3d k)
 	return k.get_str();
 }
 
+static plainstring get_tool_key_intern(uint16 tool_id)
+{
+	vector_tpl<tool_t *> *tool_list;
+	uint16 category = tool_id & 0xF000;
+	uint16 local_id = tool_id & 0x0FFF;
+
+	switch (category) {
+		case GENERAL_TOOL:
+			tool_list = &tool_t::general_tool;
+			break;
+		case SIMPLE_TOOL:
+			tool_list = &tool_t::simple_tool;
+			break;
+		case DIALOGE_TOOL:
+			tool_list = &tool_t::dialog_tool;
+			break;
+		case TOOLBAR_TOOL:
+			return "";
+		default:
+			return "";
+	}
+	if (!tool_list || local_id >= tool_list->get_count()) {
+		return "";
+	}
+
+	tool_t *tool = (*tool_list)[local_id];
+	if (!tool) {
+		return "";
+	}
+
+	static char buf[2];
+	buf[0] = static_cast<char>(tool->command_key);
+	buf[1] = '\0';
+	return buf;
+}
+
 void export_string_methods(HSQUIRRELVM vm)
 {
 	/**
@@ -114,6 +150,15 @@ void export_string_methods(HSQUIRRELVM vm)
 	 * @returns time difference using the current local setting
 	 */
 	register_method(vm, &difftick_to_string_intern, "difftick_to_string");
+
+	/**
+	* Gets the tool_key (shortcut key) associated with a general tool by its ID.
+	* The ID corresponds to the index used in menuconf.tab (e.g. 0 = query tool, 1 = remover, etc.).
+	* Returns the single-character hotkey as a string (e.g. "r", "u", "M") or empty string if no hotkey or invalid ID.
+	* @param tool_id the numeric ID of the general tool (as defined in menuconf.tab)
+	* @returns a one-character string representing the hotkey, or "" if none or invalid
+	*/
+	register_method(vm, &get_tool_key_intern, "get_tool_key");
 }
 
 
