@@ -421,6 +421,7 @@ BEGIN {
 	export_types_scenario["world::get_year_ratio_goods"] = "array<integer>()"
 	export_types_scenario["world::get_year_transported_goods"] = "array<integer>()"
 	export_types_scenario["world::use_timeline"] = "bool()"
+	export_types_scenario["world::get_cursor_pos"] = "coord3d()"
 	export_types_scenario["attraction_list_x::_get"] = "building_x(integer)"
 	export_types_scenario["label_list_x::_get"] = "label_x(integer)"
 	export_types_scenario["label_list_x::get_count"] = "integer()"

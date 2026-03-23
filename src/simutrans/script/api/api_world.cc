@@ -17,6 +17,7 @@
 #include "../../player/simplay.h"
 #include "../../obj/gebaeude.h"
 #include "../../obj/label.h"
+#include "../../obj/zeiger.h"
 #include "../../descriptor/ground_desc.h"
 #include "../../simware.h"
 #include "../../builder/goods_manager.h"
@@ -230,6 +231,17 @@ const char* get_pakset_name()
 const char* get_version_number()
 {
 	return VERSION_NUMBER;
+}
+
+/** 
+ * Returns the current mouse cursor position on the map (koord3d).
+ * This is the exact position as shown by the in-game cursor (zeiger).
+ * Returns koord3d::invalid if no valid cursor position is available.
+ */
+static SQInteger world_get_cursor_pos(HSQUIRRELVM vm)
+{
+    koord3d pos = welt->get_zeiger()->get_pos();
+    return param<koord3d>::push(vm, pos);
 }
 
 void export_world(HSQUIRRELVM vm, bool scenario)
@@ -461,6 +473,12 @@ void export_world(HSQUIRRELVM vm, bool scenario)
 	 * @typemask coord()
 	 */
 	STATIC register_function(vm, world_get_size, "get_size", 1, ".");
+
+    /**
+     * @returns current cursor position on the map (coord3d_x)
+     * @typemask coord3d()
+     */
+    STATIC register_function(vm, world_get_cursor_pos, "get_cursor_pos", 1, ".");
 
 	end_class(vm);
 

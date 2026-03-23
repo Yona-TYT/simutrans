@@ -400,6 +400,7 @@ BEGIN {
 	export_types_ai["world::get_year_ratio_goods"] = "array<integer>()"
 	export_types_ai["world::get_year_transported_goods"] = "array<integer>()"
 	export_types_ai["world::use_timeline"] = "bool()"
+	export_types_ai["world::get_cursor_pos"] = "coord3d()"
 	export_types_ai["attraction_list_x::_get"] = "building_x(integer)"
 	export_types_ai["label_list_x::_get"] = "label_x(integer)"
 	export_types_ai["label_list_x::get_count"] = "integer()"
